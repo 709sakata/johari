@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: scraps
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required, 1-100 chars)
+    //   - status: string (required, ['open', 'closed'])
+    //   - authorId: string (required, matches auth.uid)
+    //   - authorName: string (required)
+    //   - authorPhoto: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Subcollection: scraps/{scrapId}/comments
+    // Document ID: auto-generated
+    // Fields:
+    //   - content: string (required, 1-10000 chars)
+    //   - authorId: string (required, matches auth.uid)
+    //   - authorName: string (required)
+    //   - authorPhoto: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - parentId: string (optional)
+    //
+    // Collection: feeds
+    // Document ID: auto-generated
+    // Fields:
+    //   - url: string (required)
+    //   - title: string (required)
+    //   - authorId: string (required, matches auth.uid)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidScrap(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.status in ['open', 'closed'] &&
+             data.authorId is string &&
+             data.authorName is string &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return data.content is string && data.content.size() >= 0 && data.content.size() <= 10000 &&
+             data.authorId is string &&
+             data.authorName is string &&
+             data.createdAt is timestamp &&
+             (!('parentId' in data) || data.parentId is string) &&
+             (!('images' in data) || (data.images is map && data.images.size() <= 10));
+    }
+
+    function isValidFeed(data) {
+      return data.url is string && data.url.size() > 0 &&
+             data.title is string && data.title.size() > 0 &&
+             data.authorId is string &&
+             data.createdAt is timestamp;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "naoki.sakata@hopin.co.jp" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /scraps/{scrapId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && 
+                      isValidScrap(request.resource.data) && 
+                      request.resource.data.authorId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                      isValidScrap(request.resource.data) && 
+                      (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                      request.resource.data.authorId == resource.data.authorId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && 
+                        isValidComment(request.resource.data) && 
+                        request.resource.data.authorId == request.auth.uid;
+        allow update: if isAuthenticated() && 
+                        isValidComment(request.resource.data) && 
+                        (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                        request.resource.data.authorId == resource.data.authorId &&
+                        request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
+
+    match /feeds/{feedId} {
+      allow read: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+                      isValidFeed(request.resource.data) && 
+                      request.resource.data.authorId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                      isValidFeed(request.resource.data) && 
+                      resource.data.authorId == request.auth.uid &&
+                      request.resource.data.authorId == resource.data.authorId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

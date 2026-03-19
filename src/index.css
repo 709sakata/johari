@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "highlight.js/styles/github-dark.css";
+
+@layer base {
+  .prose {
+    @apply text-gray-800 leading-relaxed break-words;
+  }
+  .prose h1 {
+    @apply text-2xl font-black mt-8 mb-4 pb-2 border-b border-gray-100;
+  }
+  .prose h2 {
+    @apply text-xl font-black mt-7 mb-3 pb-1 border-b border-gray-50;
+  }
+  .prose h3 {
+    @apply text-lg font-bold mt-6 mb-2;
+  }
+  .prose p {
+    @apply mb-4 leading-7;
+  }
+  .prose ul {
+    @apply list-disc list-outside ml-6 mb-4 space-y-1;
+  }
+  .prose ol {
+    @apply list-decimal list-outside ml-6 mb-4 space-y-1;
+  }
+  .prose li {
+    @apply pl-1;
+  }
+  .prose code:not(pre code) {
+    @apply bg-gray-100 px-1.5 py-0.5 rounded font-mono text-sm text-pink-600 font-medium;
+  }
+  .prose pre {
+    @apply bg-gray-900 text-gray-100 p-5 rounded-2xl overflow-x-auto mb-6 font-mono text-sm shadow-inner;
+  }
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose blockquote {
+    @apply border-l-4 border-blue-200 pl-5 italic text-gray-500 mb-6 bg-blue-50/30 py-1 rounded-r-lg;
+  }
+  .prose a {
+    @apply text-blue-600 hover:underline font-medium;
+  }
+  .prose table {
+    @apply w-full border-collapse mb-6 text-sm;
+  }
+  .prose th {
+    @apply bg-gray-50 border border-gray-200 px-4 py-2 text-left font-bold;
+  }
+  .prose td {
+    @apply border border-gray-200 px-4 py-2;
+  }
+  .prose hr {
+    @apply my-8 border-t border-gray-100;
+  }
+  .prose img {
+    @apply rounded-2xl shadow-md my-6 max-w-full h-auto;
+  }
+  .prose input[type="checkbox"] {
+    @apply rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2;
+  }
+  .katex-display {
+    @apply my-6 overflow-x-auto overflow-y-hidden py-2;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "description": "The display name of the user." },
+        "photoURL": { "type": "string", "description": "The photo URL of the user." },
+        "bio": { "type": "string", "description": "A short self-introduction of the user." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The last update timestamp." }
+      },
+      "required": ["displayName", "updatedAt"]
+    },
+    "scrap": {
+      "title": "Scrap",
+      "description": "A scrap thread containing technical notes.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the scrap." },
+        "status": { "type": "string", "enum": ["open", "closed"], "description": "The status of the scrap." },
+        "authorId": { "type": "string", "description": "The UID of the author." },
+        "authorName": { "type": "string", "description": "The display name of the author." },
+        "authorPhoto": { "type": "string", "description": "The photo URL of the author." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The creation timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The last update timestamp." }
+      },
+      "required": ["title", "status", "authorId", "authorName", "createdAt", "updatedAt"]
+    },
+    "comment": {
+      "title": "Comment",
+      "description": "A comment within a scrap thread.",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string", "description": "The markdown content of the comment." },
+        "authorId": { "type": "string", "description": "The UID of the author." },
+        "authorName": { "type": "string", "description": "The display name of the author." },
+        "authorPhoto": { "type": "string", "description": "The photo URL of the author." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The creation timestamp." },
+        "parentId": { "type": "string", "description": "The ID of the parent comment, if this is a reply." },
+        "images": { 
+          "type": "object", 
+          "description": "A map of image IDs to base64 encoded data."
+        }
+      },
+      "required": ["content", "authorId", "authorName", "createdAt"]
+    },
+    "feed": {
+      "title": "Feed",
+      "description": "An RSS feed subscription.",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "description": "The URL of the RSS feed." },
+        "title": { "type": "string", "description": "The title of the feed." },
+        "authorId": { "type": "string", "description": "The UID of the subscriber." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The creation timestamp." }
+      },
+      "required": ["url", "title", "authorId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/scraps/{scrapId}": {
+      "schema": "scrap",
+      "description": "Collection of scrap threads."
+    },
+    "/scraps/{scrapId}/comments/{commentId}": {
+      "schema": "comment",
+      "description": "Subcollection of comments for a specific scrap."
+    },
+    "/feeds/{feedId}": {
+      "schema": "feed",
+      "description": "Collection of RSS feed subscriptions."
+    }
+  }
+}
