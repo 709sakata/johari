@@ -8,17 +8,50 @@ import { NewScrapPage } from './components/NewScrapPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MyPage } from './components/MyPage';
 import { PublicProfile } from './components/PublicProfile';
+import { QASection } from './components/QASection';
+import { QADetail } from './components/QADetail';
 import { Scrap } from './types';
-import { LayoutGrid, MessageSquare, Loader2, User as UserIcon, Rss } from 'lucide-react';
+import { LayoutGrid, MessageSquare, Loader2, User as UserIcon, Rss, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
+import { Helmet } from 'react-helmet-async';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
+function QACounter() {
+  const [count, setCount] = useState(0);
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'identity_tasks'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+    return onSnapshot(q, (snapshot) => {
+      setCount(snapshot.size);
+    });
+  }, [user]);
+
+  if (count === 0) return null;
+
+  return (
+    <div className="relative group cursor-help" title={`${count}件の未回答の問いがあります`}>
+      <HelpCircle className="w-5 h-5 text-indigo-600" />
+      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+        {count}
+      </span>
+    </div>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [selectedScrap, setSelectedScrap] = useState<Scrap | null>(null);
+  const [selectedQATaskId, setSelectedQATaskId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'scraps' | 'mypage' | 'user' | 'new-scrap'>('scraps');
+  const [activeTab, setActiveTab] = useState<'scraps' | 'qa' | 'mypage' | 'user' | 'new-scrap'>('scraps');
   const [isEmbed, setIsEmbed] = useState(false);
 
   // Scroll to top on navigation
@@ -38,8 +71,18 @@ export default function App() {
       const embed = params.get('embed') === 'true';
       setIsEmbed(embed);
       
-      // Also check path-based URL (/scraps/:id or /users/:id)
+      // Also check path-based URL (/scraps/:id or /users/:id or /qa/:id)
       const path = window.location.pathname;
+      let qaId = params.get('qaId');
+      if (!qaId && path.startsWith('/qa/')) {
+        qaId = path.split('/qa/')[1];
+      }
+
+      if (qaId && !selectedQATaskId) {
+        setSelectedQATaskId(qaId);
+        setActiveTab('qa');
+      }
+
       if (!scrapId && path.startsWith('/scraps/')) {
         scrapId = path.split('/scraps/')[1];
       }
@@ -78,15 +121,25 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
+      <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+        <Helmet>
+          <title>じょはり | まだ知らない自分に出会う思考の窓</title>
+          <meta name="description" content="じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。" />
+          <meta property="og:title" content="じょはり | まだ知らない自分に出会う思考の窓" />
+          <meta property="og:description" content="思考を整理し、対話を通じて新しい視点を発見するためのプラットフォーム。" />
+          <meta property="og:url" content={window.location.origin} />
+          <meta name="twitter:title" content="じょはり | まだ知らない自分に出会う思考の窓" />
+          <meta name="twitter:description" content="思考を整理し、対話を通じて新しい視点を発見するためのプラットフォーム。" />
+        </Helmet>
         {/* Header */}
         {!isEmbed && (
           <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
-            <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
               <div 
                 className="flex items-center gap-2 cursor-pointer group"
                 onClick={() => {
                   setSelectedScrap(null);
+                  setSelectedQATaskId(null);
                   setSelectedUserId(null);
                   setActiveTab('scraps');
                   window.history.pushState({}, '', '/');
@@ -101,10 +154,49 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-6">
+                <nav className="hidden md:flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                  <button
+                    onClick={() => {
+                      setSelectedScrap(null);
+                      setSelectedQATaskId(null);
+                      setSelectedUserId(null);
+                      setActiveTab('scraps');
+                      window.history.pushState({}, '', '/');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                      activeTab === 'scraps' 
+                        ? 'bg-white text-blue-600 shadow-sm border border-gray-100' 
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    スレッド
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedScrap(null);
+                      setSelectedQATaskId(null);
+                      setSelectedUserId(null);
+                      setActiveTab('qa');
+                      window.history.pushState({}, '', '/');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                      activeTab === 'qa' 
+                        ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' 
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    Q&A
+                  </button>
+                </nav>
+
                 <div className="flex items-center gap-3">
+                  {user && <QACounter />}
                   <Auth onMyPageClick={() => {
                     setActiveTab('mypage');
                     setSelectedScrap(null);
+                    setSelectedQATaskId(null);
                     setSelectedUserId(null);
                     window.history.pushState({}, '', '/');
                   }} />
@@ -129,7 +221,7 @@ export default function App() {
 
         {isEmbed && (
           <header className="w-full bg-white border-b border-gray-100">
-            <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
+            <div className="max-w-6xl mx-auto px-4 h-14 flex items-center">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
                   <MessageSquare className="w-5 h-5 text-white" />
@@ -142,7 +234,7 @@ export default function App() {
           </header>
         )}
 
-        <main className={isEmbed ? "max-w-5xl mx-auto px-4 py-4" : "max-w-5xl mx-auto px-4 py-8"}>
+        <main className={isEmbed ? "max-w-6xl mx-auto px-4 py-4" : "max-w-6xl mx-auto px-4 py-8"}>
           <div className="space-y-8">
             <AnimatePresence mode="wait">
               {activeTab === 'scraps' ? (
@@ -205,6 +297,37 @@ export default function App() {
                         window.history.pushState({}, '', `/users/${userId}`);
                       }}
                     />
+                  </motion.div>
+                )
+              ) : activeTab === 'qa' ? (
+                selectedQATaskId ? (
+                  <motion.div
+                    key="qa-detail"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <QADetail 
+                      taskId={selectedQATaskId} 
+                      onBack={() => {
+                        setSelectedQATaskId(null);
+                        window.history.pushState({}, '', '/');
+                      }} 
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="qa"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <QASection onSelectTask={(taskId) => {
+                      setSelectedQATaskId(taskId);
+                      window.history.pushState({}, '', `/qa/${taskId}`);
+                    }} />
                   </motion.div>
                 )
               ) : activeTab === 'mypage' ? (
@@ -295,7 +418,7 @@ export default function App() {
         </main>
 
         <footer className="py-12 border-t border-gray-100 bg-white">
-          <div className="max-w-5xl mx-auto px-4 flex flex-col items-center gap-6">
+          <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-6">
             <div className="flex items-center gap-2 text-gray-400">
               <MessageSquare className="w-5 h-5" />
               <span className="font-black text-sm tracking-widest uppercase">じょはり</span>
@@ -323,7 +446,86 @@ export default function App() {
         </footer>
 
         <Toaster position="top-center" richColors />
+
+        {/* Mobile Bottom Navigation */}
+        {!isEmbed && (
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 px-6 py-3 flex items-center justify-around z-40">
+            <button
+              onClick={() => {
+                setSelectedScrap(null);
+                setSelectedQATaskId(null);
+                setSelectedUserId(null);
+                setActiveTab('scraps');
+                window.history.pushState({}, '', '/');
+              }}
+              className={`flex flex-col items-center gap-1 transition-all ${
+                activeTab === 'scraps' ? 'text-blue-600' : 'text-gray-400'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">スレッド</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedScrap(null);
+                setSelectedQATaskId(null);
+                setSelectedUserId(null);
+                setActiveTab('qa');
+                window.history.pushState({}, '', '/');
+              }}
+              className={`flex flex-col items-center gap-1 transition-all ${
+                activeTab === 'qa' ? 'text-indigo-600' : 'text-gray-400'
+              }`}
+            >
+              <div className="relative">
+                <HelpCircle className="w-5 h-5" />
+                {user && <QACounterBadge />}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest">Q&A</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('mypage');
+                setSelectedScrap(null);
+                setSelectedQATaskId(null);
+                setSelectedUserId(null);
+                window.history.pushState({}, '', '/');
+              }}
+              className={`flex flex-col items-center gap-1 transition-all ${
+                activeTab === 'mypage' ? 'text-gray-900' : 'text-gray-400'
+              }`}
+            >
+              <UserIcon className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">マイページ</span>
+            </button>
+          </nav>
+        )}
       </div>
     </ErrorBoundary>
+  );
+}
+
+function QACounterBadge() {
+  const [count, setCount] = useState(0);
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'identity_tasks'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+    return onSnapshot(q, (snapshot) => {
+      setCount(snapshot.size);
+    });
+  }, [user]);
+
+  if (count === 0) return null;
+
+  return (
+    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-white text-[7px] font-black rounded-full flex items-center justify-center border border-white">
+      {count}
+    </span>
   );
 }

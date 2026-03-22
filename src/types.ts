@@ -1,5 +1,20 @@
 import { Timestamp } from 'firebase/firestore';
 
+export interface UserLink {
+  title: string;
+  url: string;
+  platform?: string;
+}
+
+export interface User {
+  id: string;
+  displayName: string;
+  photoURL?: string;
+  bio?: string;
+  links?: string[];
+  updatedAt: Timestamp;
+}
+
 export interface Scrap {
   id: string;
   title: string;
@@ -10,6 +25,7 @@ export interface Scrap {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   commentCount?: number;
+  icon_emoji?: string;
 }
 
 export interface Comment {

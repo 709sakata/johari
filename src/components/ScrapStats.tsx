@@ -16,11 +16,10 @@ export function ScrapStats({ scraps, className }: ScrapStatsProps) {
   const closedPercentage = total > 0 ? (closedCount / total) * 100 : 0;
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between gap-4">
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">ステータス</span>
-          <span className="text-xs font-bold text-gray-900">{total} <span className="text-[10px] text-gray-400 font-medium">スレッド</span></span>
+          <span className="text-xs font-bold text-gray-900">{total} <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Threads</span></span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
@@ -28,13 +27,13 @@ export function ScrapStats({ scraps, className }: ScrapStatsProps) {
             <span className="text-[10px] font-bold text-gray-600">{openCount}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
             <span className="text-[10px] font-bold text-gray-600">{closedCount}</span>
           </div>
         </div>
       </div>
       
-      <div className="relative h-1 w-full bg-gray-200/50 rounded-full overflow-hidden flex">
+      <div className="relative h-1 w-full bg-gray-100 rounded-full overflow-hidden flex">
         <motion.div 
           initial={{ width: 0 }}
           animate={{ width: `${openPercentage}%` }}
@@ -45,13 +44,8 @@ export function ScrapStats({ scraps, className }: ScrapStatsProps) {
           initial={{ width: 0 }}
           animate={{ width: `${closedPercentage}%` }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-          className="h-full bg-gray-300"
+          className="h-full bg-gray-200"
         />
-      </div>
-      
-      <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter">
-        <span className="text-emerald-600">{Math.round(openPercentage)}% OPEN</span>
-        <span className="text-gray-400">{Math.round(closedPercentage)}% CLOSED</span>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import https from "https";
 import Parser from "rss-parser";
 import { Feed } from "feed";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
 import fs from "fs";
 
 // Load Firebase config for server-side use
@@ -23,6 +23,115 @@ if (fs.existsSync(firebaseConfigPath)) {
   } catch (error) {
     console.error("Failed to initialize Firebase Client for RSS:", error);
   }
+}
+
+async function injectSEO(html: string, req: express.Request): Promise<string> {
+  const host = req.headers["x-forwarded-host"] || req.get("host");
+  const baseUrl = `https://${host}`;
+  const url = `${baseUrl}${req.url}`;
+
+  let title = "じょはり | まだ知らない自分に出会う思考の窓";
+  let description = "じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。";
+  let ogImage = `${baseUrl}/og-image.png`;
+  let jsonLd: any = null;
+
+  const scrapMatch = req.url.match(/^\/scraps\/([a-zA-Z0-9_-]+)/);
+  const userMatch = req.url.match(/^\/users\/([a-zA-Z0-9_-]+)/);
+
+  if (scrapMatch && db) {
+    const scrapId = scrapMatch[1];
+    try {
+      const scrapDoc = await getDoc(doc(db, "scraps", scrapId));
+      if (scrapDoc.exists()) {
+        const data = scrapDoc.data();
+        title = `${data.title} | じょはり`;
+        
+        // Fetch comments to build a description
+        let threadContent = "";
+        const commentsQ = query(
+          collection(db, `scraps/${scrapId}/comments`),
+          orderBy("createdAt", "asc"),
+          limit(5)
+        );
+        const commentsSnapshot = await getDocs(commentsQ);
+        for (const commentDoc of commentsSnapshot.docs) {
+          const rawContent = commentDoc.data().content || "";
+          const cleanContent = rawContent.replace(/[#*_\-~\[\]\(\)>]/g, "").replace(/\s+/g, " ").trim();
+          if (cleanContent) {
+            if (threadContent) threadContent += " ";
+            threadContent += cleanContent;
+          }
+          if (threadContent.length >= 150) break;
+        }
+        
+        description = threadContent.length > 200 
+          ? threadContent.substring(0, 200) + "..." 
+          : threadContent || `新しいスレッド「${data.title}」が作成されました。`;
+        
+        ogImage = `${baseUrl}/api/og-image/${scrapId}`;
+        
+        jsonLd = {
+          "@context": "https://schema.org",
+          "@type": "DiscussionForumPosting",
+          "headline": data.title,
+          "author": {
+            "@type": "Person",
+            "name": data.authorName
+          },
+          "datePublished": data.createdAt?.toDate()?.toISOString(),
+          "dateModified": data.updatedAt?.toDate()?.toISOString(),
+          "image": ogImage,
+          "description": description
+        };
+      }
+    } catch (err) {
+      console.error("SEO injection error for scrap:", err);
+    }
+  } else if (userMatch && db) {
+    const userId = userMatch[1];
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        title = `${data.displayName || "ユーザー"} のプロフィール | じょはり`;
+        description = data.bio || `${data.displayName || "ユーザー"} さんの思考の窓。じょはり で思考を整理し、対話を楽しんでいます。`;
+        
+        jsonLd = {
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          "mainEntity": {
+            "@type": "Person",
+            "name": data.displayName,
+            "description": data.bio,
+            "image": data.photoURL
+          }
+        };
+      }
+    } catch (err) {
+      console.error("SEO injection error for user:", err);
+    }
+  }
+
+  let finalHtml = html;
+  finalHtml = finalHtml.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
+  finalHtml = finalHtml.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${description}" />`);
+  
+  // Replace placeholders
+  finalHtml = finalHtml.replace("<!-- __SEO_TITLE__ -->", `<meta name="title" content="${title}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_DESCRIPTION__ -->", `<meta name="description" content="${description}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_OG_TITLE__ -->", `<meta property="og:title" content="${title}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_OG_DESCRIPTION__ -->", `<meta property="og:description" content="${description}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_OG_IMAGE__ -->", `<meta property="og:image" content="${ogImage}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_OG_URL__ -->", `<meta property="og:url" content="${url}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_TWITTER_TITLE__ -->", `<meta name="twitter:title" content="${title}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_TWITTER_DESCRIPTION__ -->", `<meta name="twitter:description" content="${description}" />`);
+  finalHtml = finalHtml.replace("<!-- __SEO_TWITTER_IMAGE__ -->", `<meta name="twitter:image" content="${ogImage}" />`);
+  
+  if (jsonLd) {
+    finalHtml = finalHtml.replace("<!-- __SEO_JSON_LD__ -->", `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`);
+  }
+
+  return finalHtml;
 }
 
 async function startServer() {
@@ -349,18 +458,16 @@ async function startServer() {
               path: urlObj.pathname + urlObj.search,
               port: urlObj.port || 443,
               headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                 "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
                 "Referer": "https://www.google.com/",
-                "Connection": "close",
+                "Connection": "keep-alive",
               },
               timeout: 8000,
               rejectUnauthorized: false,
               family: 4, 
               minVersion: 'TLSv1.2',
-              // Some older Korean gov sites might need specific ciphers or settings
-              ciphers: 'DEFAULT:!DH', 
               servername: urlObj.hostname, // Explicit SNI
             }, (res) => {
               if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -377,6 +484,14 @@ async function startServer() {
                 return;
               }
               
+              const contentType = res.headers["content-type"] || "";
+              if (!contentType.includes("text/html")) {
+                // If it's a file, we can't "read" it as text easily here without more logic
+                // But we can return a placeholder
+                resolve(`<html><title>${path.basename(urlObj.pathname)}</title><body>File: ${contentType}</body></html>`);
+                return;
+              }
+
               let data = "";
               res.on("data", (chunk) => data += chunk);
               res.on("end", () => resolve(data));
@@ -414,11 +529,18 @@ async function startServer() {
           url: targetUrl,
         });
       } catch (fallbackError: any) {
-        if (error.name === 'AbortError') {
-          console.warn(`Link preview timeout for: ${targetUrl}`);
-        } else {
-          console.error(`Link preview error for ${targetUrl}:`, error.message, `(Fallback error: ${fallbackError.message})`);
+        // Silently handle common connection errors for external links
+        const isCommonError = 
+          error.name === 'AbortError' || 
+          fallbackError.message === 'Timeout' || 
+          fallbackError.code === 'ECONNRESET' || 
+          fallbackError.message.includes('ECONNRESET') ||
+          fallbackError.message.includes('ETIMEDOUT');
+
+        if (!isCommonError) {
+          console.warn(`Link preview failed for ${targetUrl}: ${error.message} (Fallback: ${fallbackError.message})`);
         }
+        
         // Return minimal info instead of 500 to keep UI clean
         res.json({ url: targetUrl, title: targetUrl });
       }
@@ -432,11 +554,28 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+    
+    // In development, we still want to test SEO injection if possible
+    // But Vite handles the index.html serving. 
+    // We can add a custom middleware to intercept index.html if needed, 
+    // but usually we test this in production build.
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.use(express.static(distPath, { index: false })); // Disable default index serving
+    
+    app.get("*", async (req, res) => {
+      try {
+        const indexPath = path.join(distPath, "index.html");
+        let html = fs.readFileSync(indexPath, "utf-8");
+        
+        // Inject SEO tags
+        html = await injectSEO(html, req);
+        
+        res.send(html);
+      } catch (err) {
+        console.error("Error serving index.html:", err);
+        res.status(500).send("Internal Server Error");
+      }
     });
   }
 

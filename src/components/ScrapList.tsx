@@ -1,14 +1,18 @@
-import { db, collection, query, orderBy } from '../firebase';
+import { useEffect } from 'react';
+import { db, collection, query, orderBy, doc, updateDoc } from '../firebase';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { Scrap } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { MessageSquare, Clock, User, Loader2, LayoutGrid } from 'lucide-react';
+import { MessageSquare, Clock, User, Loader2, LayoutGrid, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
+import { DIVERSE_EMOJIS } from '../constants/emojis';
 
 import { ScrapStats } from './ScrapStats';
 import { CommentCount } from './CommentCount';
+
+import { TruncatedTitle } from './TruncatedTitle';
 
 interface ScrapListProps {
   onSelectScrap: (scrap: Scrap) => void;
@@ -19,6 +23,27 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
   const [value, loading, error] = useCollection(
     query(collection(db, 'scraps'), orderBy('updatedAt', 'desc'))
   );
+
+  // Migration: Assign random emojis to existing scraps missing one
+  useEffect(() => {
+    if (!loading && value && value.docs.length > 0) {
+      const scrapsWithoutEmoji = value.docs.filter(doc => !doc.data().icon_emoji);
+      
+      if (scrapsWithoutEmoji.length > 0) {
+        console.log(`Migrating ${scrapsWithoutEmoji.length} scraps without emojis...`);
+        scrapsWithoutEmoji.forEach(async (scrapDoc) => {
+          const randomEmoji = DIVERSE_EMOJIS[Math.floor(Math.random() * DIVERSE_EMOJIS.length)];
+          try {
+            await updateDoc(doc(db, 'scraps', scrapDoc.id), {
+              icon_emoji: randomEmoji
+            });
+          } catch (err) {
+            console.error(`Failed to update emoji for scrap ${scrapDoc.id}:`, err);
+          }
+        });
+      }
+    }
+  }, [loading, value]);
 
   if (loading) {
     return (
@@ -53,16 +78,12 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-3">
-          <LayoutGrid className="w-6 h-6 text-blue-600" />
-          すべてのスレッド
-        </h2>
+    <div className="space-y-6">
+      <div className="flex justify-end">
         <ScrapStats scraps={scraps} className="w-full sm:w-64" />
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {scraps.map((scrap, index) => (
           <motion.div
             key={scrap.id}
@@ -70,43 +91,51 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             onClick={() => onSelectScrap(scrap)}
-            className="group relative w-full p-4 sm:p-5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-all cursor-pointer overflow-hidden"
+            className="group relative w-full p-2 bg-slate-50/80 hover:bg-slate-100/80 rounded-[2rem] transition-all cursor-pointer overflow-hidden flex items-center gap-4 sm:gap-5"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={cn(
-                    "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full",
-                    scrap.status === 'open' 
-                      ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
-                      : "bg-gray-50 text-gray-500 border border-gray-100"
-                  )}>
-                    {scrap.status === 'open' ? 'オープン' : 'クローズ'}
-                  </span>
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+            {/* Left Side: Emoji Block (Rounded Rectangle) */}
+            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
+              <span className="text-2xl sm:text-3xl select-none">
+                {scrap.icon_emoji || '📄'}
+              </span>
+            </div>
+
+            {/* Right Side: Content */}
+            <div className="flex-1 min-w-0 pr-4 sm:pr-6 py-1">
+              <h3 className={cn(
+                "font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 leading-tight",
+                scrap.title.length > 40 ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+              )}>
+                <TruncatedTitle title={scrap.title} limit={45} />
+              </h3>
+              
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                {/* Author Info */}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectUser(scrap.authorId);
+                  }}
+                  className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+                >
+                  {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
+                    <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-sm" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                    </div>
+                  )}
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-700">{scrap.authorName}</span>
+                </button>
+
+                {/* Meta Info */}
+                <div className="flex items-center gap-3 text-gray-400">
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
                   </span>
+                  
                   <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words">
-                  {scrap.title}
-                </h3>
-                <div className="mt-3 flex items-center gap-3">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectUser(scrap.authorId);
-                    }}
-                    className="flex items-center gap-1.5 hover:text-blue-600 transition-colors"
-                  >
-                    {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
-                      <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
-                    ) : (
-                      <User className="w-5 h-5 text-gray-400 p-0.5 bg-gray-100 rounded-full" />
-                    )}
-                    <span className="text-xs font-medium text-gray-600 group-hover:text-inherit">{scrap.authorName}</span>
-                  </button>
                 </div>
               </div>
             </div>

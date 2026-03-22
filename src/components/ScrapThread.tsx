@@ -4,7 +4,7 @@ import { Scrap, Comment, OperationType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import TextareaAutosize from 'react-textarea-autosize';
-import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkEmoji from 'remark-emoji';
@@ -18,10 +18,14 @@ import { ExpandableBio } from './ExpandableBio';
 import { Auth } from './Auth';
 import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
+import { cn } from '../lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkPreview } from './LinkPreview';
 import { toast } from 'sonner';
+import { DIVERSE_EMOJIS } from '../constants/emojis';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 
 interface ScrapThreadProps {
   scrap: Scrap;
@@ -35,9 +39,16 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
 
   return (
     <div className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
-      <button 
+      <div 
         onClick={() => onSelectUser?.(authorId)}
-        className="group flex flex-col items-center"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onSelectUser?.(authorId);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        className="group flex flex-col items-center cursor-pointer focus:outline-none"
       >
         {authorPhoto && authorPhoto !== "" ? (
           <img src={authorPhoto} alt={authorName} className="w-16 h-16 rounded-full border-4 border-white shadow-sm mb-3 group-hover:border-blue-100 transition-all" referrerPolicy="no-referrer" />
@@ -47,7 +58,7 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
           </div>
         )}
         <p className="font-black text-gray-900 group-hover:text-blue-600 transition-colors">{authorName}</p>
-      </button>
+      </div>
       {bio && (
         <ExpandableBio bio={bio} className="text-xs mt-2 px-2 w-full" />
       )}
@@ -74,16 +85,40 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
   const [showMenu, setShowMenu] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(initialScrap.title);
+  const [isPickingEmoji, setIsPickingEmoji] = useState(false);
   const [isDeletingScrap, setIsDeletingScrap] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const tocContainerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const scrap = scrapValue?.exists() ? ({ id: scrapValue.id, ...scrapValue.data() } as Scrap) : initialScrap;
   const allComments = commentsValue?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)) || [];
   
+  // SEO description from comments
+  const seoDescription = allComments.slice(0, 5).map(c => c.content.replace(/[#*_\-~\[\]\(\)>]/g, "").replace(/\s+/g, " ").trim()).join(" ").substring(0, 160);
+  const description = seoDescription || `新しいスレッド「${scrap.title}」が作成されました。`;
+  const ogImage = `${window.location.origin}/api/og-image/${scrap.id}`;
+  const url = `${window.location.origin}/scraps/${scrap.id}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "DiscussionForumPosting",
+    "headline": scrap.title,
+    "author": {
+      "@type": "Person",
+      "name": scrap.authorName
+    },
+    "datePublished": scrap.createdAt?.toDate()?.toISOString(),
+    "dateModified": scrap.updatedAt?.toDate()?.toISOString(),
+    "image": ogImage,
+    "description": description
+  };
+
   // Auto-fix comment count if it's missing or incorrect
   useEffect(() => {
     if (scrapValue?.exists() && !loading && commentsValue) {
@@ -96,6 +131,23 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
       }
     }
   }, [scrapValue, commentsValue, loading, scrap.id]);
+
+  // Handle click outside for menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
 
   const parentComments = allComments.filter(c => !c.parentId);
   const replies = allComments.filter(c => c.parentId);
@@ -120,6 +172,42 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Scroll Spy Implementation
+  useEffect(() => {
+    if (loading || allComments.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: '-100px 0px -70% 0%',
+        threshold: 0,
+      }
+    );
+
+    allComments.forEach((comment) => {
+      const el = document.getElementById(comment.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [loading, allComments]);
+
+  // Auto-scroll sidebar ToC item into view
+  useEffect(() => {
+    if (activeId) {
+      const tocItem = document.getElementById(`toc-${activeId}`);
+      if (tocItem) {
+        tocItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [activeId]);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -194,6 +282,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
   };
 
   const toggleStatus = async () => {
+    setShowMenu(false);
     setIsUpdating(true);
     const path = `scraps/${scrap.id}`;
     try {
@@ -225,14 +314,86 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
     }
   };
 
-  const isAuthor = auth.currentUser?.uid === scrap.authorId;
+  const isAdminUser = auth.currentUser?.email === 'naoki.sakata@hopin.co.jp';
+  const isAuthor = auth.currentUser?.uid === scrap.authorId || isAdminUser;
+
+  const openEmojiPicker = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthor) return;
+    setIsPickingEmoji(true);
+  };
+
+  const handleSelectEmoji = async (emojiData: EmojiClickData) => {
+    setIsPickingEmoji(false);
+    const path = 'scraps';
+    try {
+      await updateDoc(doc(db, path, scrap.id), {
+        icon_emoji: emojiData.emoji,
+        updatedAt: serverTimestamp()
+      });
+      toast.success('絵文字を変更しました');
+    } catch (error) {
+      toast.error('絵文字の変更に失敗しました');
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
+  const copyThreadAsMarkdown = () => {
+    setShowMenu(false);
+    const scrapDate = scrap.createdAt ? scrap.createdAt.toDate().toLocaleString('ja-JP') : '不明';
+    let markdown = `# ${scrap.icon_emoji || ''} ${scrap.title}\n`;
+    markdown += `Author: ${scrap.authorName}\n`;
+    markdown += `Date: ${scrapDate}\n\n`;
+    markdown += `---\n\n`;
+
+    // Sort comments by date
+    const sortedComments = [...allComments].sort((a, b) => {
+      const tA = a.createdAt?.toMillis() || 0;
+      const tB = b.createdAt?.toMillis() || 0;
+      return tA - tB;
+    });
+
+    sortedComments.forEach((comment) => {
+      const commentDate = comment.createdAt ? comment.createdAt.toDate().toLocaleString('ja-JP') : '不明';
+      markdown += `## ${comment.authorName} (${commentDate})\n`;
+      markdown += `${comment.content}\n\n`;
+      markdown += `---\n\n`;
+    });
+
+    navigator.clipboard.writeText(markdown.trim()).then(() => {
+      toast.success('スレッド全体をMarkdownとしてコピーしました');
+    }).catch(() => {
+      toast.error('コピーに失敗しました');
+    });
+  };
+
   const excerpt = (text: string) => {
     const clean = text.replace(/[#*`]/g, '').trim();
-    return clean.length > 20 ? clean.substring(0, 20) + '...' : clean;
+    if (clean.length <= 20) return clean;
+    return (
+      <>
+        {clean.substring(0, 20)}
+        <span className="text-[0.7em] opacity-40 ml-0.5 align-baseline">...</span>
+      </>
+    );
   };
 
   return (
-    <div className="max-w-5xl mx-auto pb-20">
+    <div className="max-w-6xl mx-auto pb-20">
+      <Helmet>
+        <title>{scrap.title} | じょはり</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={`${scrap.title} | じょはり`} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:url" content={url} />
+        <meta name="twitter:title" content={`${scrap.title} | じょはり`} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+      </Helmet>
       <div className="">
         <button
           onClick={onBack}
@@ -243,7 +404,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-stretch">
         {/* Main Content */}
         <div className="space-y-6 min-w-0">
           {/* Mobile Sidebar Content */}
@@ -306,7 +467,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                 </div>
 
                 {isAuthor && (
-                  <div className="relative">
+                  <div className="relative" ref={menuRef}>
                     <button 
                       onClick={() => setShowMenu(!showMenu)}
                       className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
@@ -330,7 +491,28 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                             {scrap.status === 'open' ? 'スレッドを閉じる' : 'スレッドを再開する'}
                           </button>
                           <button
-                            onClick={() => setIsDeletingScrap(true)}
+                            onClick={copyThreadAsMarkdown}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Copy className="w-4 h-4" />
+                            Markdownでコピー
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMenu(false);
+                              setIsPickingEmoji(true);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            絵文字を変更
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsDeletingScrap(true);
+                              setShowMenu(false);
+                            }}
                             disabled={isUpdating}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                           >
@@ -382,24 +564,95 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
               ) : (
                 <div className="group/title relative inline-block w-full">
                   <h1 
-                    className="text-xl sm:text-3xl font-black text-gray-900 leading-tight cursor-pointer hover:text-blue-600 transition-colors pr-8 break-words"
+                    className={cn(
+                      "font-black text-gray-900 leading-tight cursor-pointer hover:text-blue-600 transition-colors pr-8 break-words",
+                      scrap.title.length > 50 ? "text-lg sm:text-xl" : 
+                      scrap.title.length > 25 ? "text-xl sm:text-2xl" : 
+                      "text-2xl sm:text-3xl"
+                    )}
                     onClick={() => isAuthor && setIsEditingTitle(true)}
                   >
-                    {scrap.title}
-                    {isAuthor && (
-                      <span className="inline-flex items-center ml-2 opacity-0 group-hover/title:opacity-100 transition-opacity align-middle">
-                        <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 hover:text-blue-600" />
+                    {scrap.icon_emoji && (
+                      <span className="relative inline-block mr-1 sm:mr-2 align-top">
+                        <span className="inline-block">
+                          {scrap.icon_emoji}
+                        </span>
+                        
+                        <AnimatePresence>
+                          {isPickingEmoji && (
+                            <>
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsPickingEmoji(false);
+                                }}
+                                className="fixed inset-0 z-40"
+                              />
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden font-sans"
+                                style={{
+                                  // @ts-ignore
+                                  '--epr-search-input-font-size': '14px',
+                                  '--epr-category-label-font-size': '14px',
+                                  '--epr-emoji-size': '24px',
+                                  '--epr-header-padding': '12px 16px',
+                                  '--epr-bg-color': '#ffffff',
+                                  '--epr-category-navigation-button-size': '24px',
+                                  '--epr-search-input-bg-color': '#f1f3f4',
+                                  '--epr-search-input-border-radius': '24px',
+                                  '--epr-search-input-padding': '8px 16px',
+                                  '--epr-category-label-bg-color': '#ffffff',
+                                  '--epr-category-label-text-color': '#202124',
+                                  '--epr-highlight-color': '#1a73e8',
+                                  '--epr-hover-bg-color': '#f1f3f4',
+                                  '--epr-focus-bg-color': '#ffffff',
+                                  '--epr-picker-border-radius': '16px',
+                                } as React.CSSProperties}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <EmojiPicker
+                                  onEmojiClick={handleSelectEmoji}
+                                  autoFocusSearch={false}
+                                  theme={Theme.LIGHT}
+                                  width={320}
+                                  height={400}
+                                  lazyLoadEmojis={true}
+                                  searchPlaceHolder="Search"
+                                  previewConfig={{ showPreview: false }}
+                                  skinTonesDisabled={true}
+                                  searchDisabled={false}
+                                  // @ts-ignore
+                                  categoriesLocation="top"
+                                />
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
                       </span>
                     )}
+                    {scrap.title}
                   </h1>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-3 pt-6 border-t border-gray-50">
-              <button 
+              <div 
                 onClick={() => onSelectUser?.(scrap.authorId)}
-                className="flex items-center gap-3 group/author w-full max-w-full min-w-0"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    onSelectUser?.(scrap.authorId);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                className="flex items-center gap-3 group/author w-full max-w-full min-w-0 cursor-pointer focus:outline-none"
               >
                 {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
                   <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-10 h-10 rounded-full border border-gray-100 group-hover:border-blue-100 transition-all" referrerPolicy="no-referrer" />
@@ -410,10 +663,9 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                 )}
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{scrap.authorName}</p>
-                  <BioDisplay userId={scrap.authorId} className="text-xs text-gray-500 mt-0.5 italic truncate" />
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">作成者</p>
                 </div>
-              </button>
+              </div>
             </div>
           </div>
 
@@ -479,7 +731,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
         </div>
 
         {/* Sidebar */}
-        <aside className="hidden lg:flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-120px)] w-[300px]">
+        <aside className="hidden lg:flex flex-col gap-6 w-[300px]">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
             <div className="p-6 space-y-6">
               {/* Status Toggle Button */}
@@ -520,12 +772,15 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
 
           {/* Table of Contents (Hierarchical) */}
           {parentComments.length > 0 && (
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4 flex-1 min-h-0 flex flex-col">
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <List className="w-4 h-4 text-blue-600" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">目次</p>
+            <div className="sticky top-20 bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4 flex flex-col min-h-[calc(100vh-100px)] max-h-[calc(100vh-100px)]">
+              <div className="flex items-center justify-between gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <List className="w-4 h-4 text-blue-600" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">目次</p>
+                </div>
+                {scrap.icon_emoji && <span className="text-xl">{scrap.icon_emoji}</span>}
               </div>
-              <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
+              <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" ref={tocContainerRef}>
                 {parentComments.map((pc) => {
                   // 再帰的にすべての子孫コメントを取得する関数
                   const getDescendants = (pid: string): Comment[] => {
@@ -544,35 +799,54 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                     return tA - tB;
                   });
 
+                  const isActive = activeId === pc.id;
+
                   return (
                     <div key={pc.id} className="space-y-2">
                       <div 
-                        className="group cursor-pointer p-2 hover:bg-blue-50 rounded-lg transition-colors border-l-2 border-transparent hover:border-blue-600"
+                        id={`toc-${pc.id}`}
+                        className={`group cursor-pointer p-2 rounded-lg transition-all border-l-2 ${
+                          isActive 
+                            ? "bg-blue-50 border-blue-600 shadow-sm" 
+                            : "hover:bg-blue-50 border-transparent hover:border-blue-600"
+                        }`}
                         onClick={() => {
                           const el = document.getElementById(pc.id);
                           el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }}
                       >
-                        <p className="text-xs text-gray-600 font-bold group-hover:text-blue-700 truncate">
+                        <p className={`text-xs transition-colors truncate ${
+                          isActive ? "text-blue-700 font-black" : "text-gray-600 font-bold group-hover:text-blue-700"
+                        }`}>
                           {excerpt(pc.content)}
                         </p>
                       </div>
                       {pcDescendants.length > 0 && (
                         <div className="ml-4 border-l-2 border-gray-100 pl-4 space-y-2">
-                          {pcDescendants.map(r => (
-                            <div 
-                              key={r.id}
-                              className="group cursor-pointer p-1.5 hover:bg-blue-50 rounded-lg transition-colors border-l-2 border-transparent hover:border-blue-600"
-                              onClick={() => {
-                                const el = document.getElementById(r.id);
-                                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }}
-                            >
-                              <p className="text-[11px] text-gray-500 font-medium group-hover:text-blue-700 truncate">
-                                {excerpt(r.content)}
-                              </p>
-                            </div>
-                          ))}
+                          {pcDescendants.map(r => {
+                            const isReplyActive = activeId === r.id;
+                            return (
+                              <div 
+                                key={r.id}
+                                id={`toc-${r.id}`}
+                                className={`group cursor-pointer p-1.5 rounded-lg transition-all border-l-2 ${
+                                  isReplyActive 
+                                    ? "bg-blue-50 border-blue-600 shadow-sm" 
+                                    : "hover:bg-blue-50 border-transparent hover:border-blue-600"
+                                }`}
+                                onClick={() => {
+                                  const el = document.getElementById(r.id);
+                                  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }}
+                              >
+                                <p className={`text-[11px] transition-colors truncate ${
+                                  isReplyActive ? "text-blue-700 font-bold" : "text-gray-500 font-medium group-hover:text-blue-700"
+                                }`}>
+                                  {excerpt(r.content)}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -701,6 +975,18 @@ function CommentItem({
     return content;
   };
 
+  const copyCommentAsMarkdown = () => {
+    const commentDate = comment.createdAt ? comment.createdAt.toDate().toLocaleString('ja-JP') : '不明';
+    let markdown = `## ${comment.authorName} (${commentDate})\n`;
+    markdown += `${comment.content}`;
+
+    navigator.clipboard.writeText(markdown.trim()).then(() => {
+      toast.success('コメントをMarkdownとしてコピーしました');
+    }).catch(() => {
+      toast.error('コピーに失敗しました');
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -791,7 +1077,7 @@ function CommentItem({
             </div>
           </div>
         ) : (
-          <div className="prose prose-sm prose-blue max-w-none text-gray-800 text-[13px] sm:text-sm leading-relaxed prose-headings:font-black prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg prose-h3:text-sm sm:prose-h3:text-base prose-h4:text-[13px] sm:prose-h4:text-sm prose-p:text-inherit prose-li:text-inherit">
+          <div className="prose prose-base sm:prose-lg prose-blue max-w-none text-gray-800 text-[15px] sm:text-lg leading-relaxed prose-headings:font-black prose-h1:text-xl sm:prose-h1:text-3xl prose-h2:text-lg sm:prose-h2:text-2xl prose-h3:text-base sm:prose-h3:text-xl prose-h4:text-[15px] sm:prose-h4:text-lg prose-p:text-inherit prose-li:text-inherit">
             <ReactMarkdown 
               remarkPlugins={[remarkGfm, remarkEmoji, remarkMath]} 
               rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeKatex]}
@@ -850,6 +1136,15 @@ function CommentItem({
               >
                 <Reply className="w-3.5 h-3.5" />
                 返信を追加
+              </button>
+            )}
+            {!isEditing && (
+              <button
+                onClick={copyCommentAsMarkdown}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded-md"
+                title="Markdownとしてコピー"
+              >
+                <Copy className="w-3.5 h-3.5" />
               </button>
             )}
             {replies.length > 0 && (

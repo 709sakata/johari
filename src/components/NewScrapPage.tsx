@@ -5,6 +5,7 @@ import { handleFirestoreError } from '../lib/firestore';
 import { Plus, Loader2, ArrowLeft, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import { DIVERSE_EMOJIS } from '../constants/emojis';
 
 interface NewScrapPageProps {
   onClose: () => void;
@@ -21,6 +22,10 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
 
     setIsSubmitting(true);
     const path = 'scraps';
+    
+    // Pick a random emoji
+    const randomEmoji = DIVERSE_EMOJIS[Math.floor(Math.random() * DIVERSE_EMOJIS.length)];
+
     try {
       const docRef = await addDoc(collection(db, path), {
         title: title.trim(),
@@ -31,6 +36,7 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         commentCount: 0,
+        icon_emoji: randomEmoji,
       });
       setTitle('');
       toast.success('スレッドを作成しました');

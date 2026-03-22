@@ -15,6 +15,7 @@ service cloud.firestore {
     //   - authorPhoto: string (optional)
     //   - createdAt: timestamp (required)
     //   - updatedAt: timestamp (required)
+    //   - icon_emoji: string (optional)
     //
     // Subcollection: scraps/{scrapId}/comments
     // Document ID: auto-generated
@@ -32,6 +33,39 @@ service cloud.firestore {
     //   - url: string (required)
     //   - title: string (required)
     //   - authorId: string (required, matches auth.uid)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: users
+    // Document ID: matches auth.uid
+    // Fields:
+    //   - displayName: string (required)
+    //   - photoURL: string (optional)
+    //   - bio: string (optional)
+    //   - links: list (optional, objects with title and url)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: identity_tasks
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required, matches auth.uid)
+    //   - type: string (required, ['fact-check', 'meta-cognition', 'audit'])
+    //   - question: string (required)
+    //   - steps: map (optional, for 'audit' type)
+    //     - observation: string
+    //     - logicGap: string
+    //     - distortion: string
+    //     - syncTask: string
+    //   - status: string (required, ['pending', 'completed'])
+    //   - answer: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Subcollection: identity_tasks/{taskId}/qa_comments
+    // Document ID: auto-generated
+    // Fields:
+    //   - content: string (required, 1-10000 chars)
+    //   - authorId: string (required, matches auth.uid)
+    //   - authorName: string (required)
+    //   - authorPhoto: string (optional)
     //   - createdAt: timestamp (required)
     //
     // ===============================================================
@@ -53,7 +87,10 @@ service cloud.firestore {
              data.authorId is string &&
              data.authorName is string &&
              data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
+             data.updatedAt is timestamp &&
+             (!('icon_emoji' in data) || (data.icon_emoji is string && data.icon_emoji.size() <= 10)) &&
+             (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null)) &&
+             (!('commentCount' in data) || data.commentCount is number);
     }
 
     function isValidComment(data) {
@@ -70,6 +107,38 @@ service cloud.firestore {
              data.title is string && data.title.size() > 0 &&
              data.authorId is string &&
              data.createdAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+             (!('links' in data) || (data.links is list && data.links.size() <= 1000)) &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidIdentityTask(data) {
+      return data.userId is string &&
+             data.type in ['fact-check', 'meta-cognition', 'audit'] &&
+             data.question is string && data.question.size() > 0 &&
+             data.status in ['pending', 'completed'] &&
+             data.createdAt is timestamp &&
+             (!('answer' in data) || (data.answer is string && data.answer.size() <= 2000)) &&
+             (!('steps' in data) || (
+               data.steps is map &&
+               data.steps.observation is string &&
+               data.steps.logicGap is string &&
+               data.steps.distortion is string &&
+               data.steps.syncTask is string
+             ));
+    }
+
+    function isValidQAComment(data) {
+      return data.content is string && data.content.size() > 0 && data.content.size() <= 10000 &&
+             data.authorId is string &&
+             data.authorName is string &&
+             data.createdAt is timestamp &&
+             (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null));
     }
 
     function isAdmin() {
@@ -110,7 +179,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if true;
-      allow write: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow delete: if isOwner(userId);
     }
 
     match /feeds/{feedId} {
@@ -124,6 +195,33 @@ service cloud.firestore {
                       request.resource.data.authorId == resource.data.authorId &&
                       request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /identity_tasks/{taskId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && 
+                      isValidIdentityTask(request.resource.data) && 
+                      request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                      isValidIdentityTask(request.resource.data) && 
+                      (resource.data.userId == request.auth.uid || isAdmin()) &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      match /qa_comments/{commentId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/identity_tasks/$(taskId)).data.userId == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() && 
+                        isValidQAComment(request.resource.data) && 
+                        request.resource.data.authorId == request.auth.uid &&
+                        (get(/databases/$(database)/documents/identity_tasks/$(taskId)).data.userId == request.auth.uid || isAdmin());
+        allow update: if isAuthenticated() && 
+                        isValidQAComment(request.resource.data) && 
+                        (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                        request.resource.data.authorId == resource.data.authorId &&
+                        request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
     }
 
     match /test/connection {
