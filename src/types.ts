@@ -27,6 +27,7 @@ export interface Scrap {
   updatedAt: Timestamp;
   commentCount?: number;
   icon_emoji?: string;
+  tags?: string[];
 }
 
 export interface Comment {

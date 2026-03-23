@@ -108,6 +108,25 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
               )}>
                 <TruncatedTitle title={scrap.title} limit={45} />
               </h3>
+
+              {/* Tags */}
+              {scrap.tags && scrap.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {scrap.tags.slice(0, 3).map(tag => (
+                    <span 
+                      key={tag}
+                      className="px-1.5 py-0.5 bg-white/50 text-gray-500 text-[8px] sm:text-[9px] font-bold rounded-md border border-gray-100"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                  {scrap.tags.length > 3 && (
+                    <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold">
+                      +{scrap.tags.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
               
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 {/* Author Info */}

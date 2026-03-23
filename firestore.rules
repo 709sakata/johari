@@ -85,7 +85,7 @@ service cloud.firestore {
     }
 
     function isValidScrap(data) {
-      return hasOnlyAllowedFields(data, ['title', 'content', 'authorId', 'authorName', 'authorPhoto', 'status', 'createdAt', 'updatedAt', 'commentCount', 'icon_emoji']) &&
+      return hasOnlyAllowedFields(data, ['title', 'content', 'authorId', 'authorName', 'authorPhoto', 'status', 'createdAt', 'updatedAt', 'commentCount', 'icon_emoji', 'tags']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 5000 &&
              (!('content' in data) || (data.content is string && data.content.size() <= 200000)) &&
              data.status in ['open', 'closed'] &&
@@ -95,7 +95,8 @@ service cloud.firestore {
              data.updatedAt is timestamp &&
              (!('icon_emoji' in data) || (data.icon_emoji is string && data.icon_emoji.size() <= 10)) &&
              (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null)) &&
-             (!('commentCount' in data) || data.commentCount is number);
+             (!('commentCount' in data) || data.commentCount is number) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20));
     }
 
     function isValidComment(data) {

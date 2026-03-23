@@ -4,7 +4,7 @@ import { Scrap, Comment, OperationType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import TextareaAutosize from 'react-textarea-autosize';
-import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy } from 'lucide-react';
+import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy, Hash } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkEmoji from 'remark-emoji';
@@ -85,6 +85,8 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
   const [showMenu, setShowMenu] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(initialScrap.title);
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [editedTags, setEditedTags] = useState(initialScrap.tags?.join(' ') || '');
   const [isPickingEmoji, setIsPickingEmoji] = useState(false);
   const [isDeletingScrap, setIsDeletingScrap] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
@@ -159,6 +161,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
   }, [scrap.title, isEditingTitle]);
 
   useEffect(() => {
+    if (!isEditingTags) {
+      setEditedTags(scrap.tags?.join(' ') || '');
+    }
+  }, [scrap.tags, isEditingTags]);
+
+  useEffect(() => {
     const handleScroll = () => {
       // Show button if we've scrolled down a bit, but not at the very bottom
       const scrolled = window.scrollY;
@@ -231,6 +239,29 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
       toast.success('タイトルを更新しました');
     } catch (error) {
       toast.error('タイトルの更新に失敗しました');
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleUpdateTags = async () => {
+    const tags = editedTags
+      .split(/[,\s]+/)
+      .map(tag => tag.trim().replace(/^#/, ''))
+      .filter(tag => tag.length > 0);
+
+    setIsUpdating(true);
+    const path = `scraps/${scrap.id}`;
+    try {
+      await updateDoc(doc(db, path), {
+        tags: tags,
+        updatedAt: serverTimestamp(),
+      });
+      setIsEditingTags(false);
+      toast.success('タグを更新しました');
+    } catch (error) {
+      toast.error('タグの更新に失敗しました');
       handleFirestoreError(error, OperationType.UPDATE, path);
     } finally {
       setIsUpdating(false);
@@ -640,6 +671,66 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                   </h1>
                 </div>
               )}
+
+              {/* Tags Section */}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {isEditingTags ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <Hash className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={editedTags}
+                      onChange={(e) => setEditedTags(e.target.value)}
+                      placeholder="#思考 #アイデア #メモ"
+                      className="flex-1 text-sm bg-gray-50 border-b border-blue-600 focus:outline-none px-1 py-0.5"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleUpdateTags();
+                        if (e.key === 'Escape') setIsEditingTags(false);
+                      }}
+                    />
+                    <button
+                      onClick={handleUpdateTags}
+                      disabled={isUpdating}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setIsEditingTags(false)}
+                      className="p-1 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {scrap.tags && scrap.tags.length > 0 ? (
+                      scrap.tags.map(tag => (
+                        <span 
+                          key={tag}
+                          className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md border border-gray-200"
+                        >
+                          #{tag}
+                        </span>
+                      ))
+                    ) : (
+                      isAuthor && (
+                        <span className="text-[10px] text-gray-300 font-medium italic">タグなし</span>
+                      )
+                    )}
+                    {isAuthor && (
+                      <button
+                        onClick={() => setIsEditingTags(true)}
+                        className="p-1 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                        title="タグを編集"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-3 pt-6 border-t border-gray-50">

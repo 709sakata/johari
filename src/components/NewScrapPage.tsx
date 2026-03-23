@@ -17,6 +17,7 @@ import { logActivity, ActivityType } from '../lib/analytics';
 
 export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
   const [title, setTitle] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,6 +30,12 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
     // Pick a random emoji
     const randomEmoji = DIVERSE_EMOJIS[Math.floor(Math.random() * DIVERSE_EMOJIS.length)];
 
+    // Parse tags
+    const tags = tagsInput
+      .split(/[,\s]+/)
+      .map(tag => tag.trim().replace(/^#/, ''))
+      .filter(tag => tag.length > 0);
+
     try {
       const docRef = await addDoc(collection(db, path), {
         title: title.trim(),
@@ -40,9 +47,11 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
         updatedAt: serverTimestamp(),
         commentCount: 0,
         icon_emoji: randomEmoji,
+        tags: tags,
       });
       setTitle('');
-      logActivity(ActivityType.ACTION, undefined, 'create_scrap', { title: title.trim(), scrapId: docRef.id });
+      setTagsInput('');
+      logActivity(ActivityType.ACTION, undefined, 'create_scrap', { title: title.trim(), scrapId: docRef.id, tags });
       toast.success('スレッドを作成しました');
       onSuccess(docRef.id);
     } catch (error) {
@@ -103,6 +112,21 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
               required
               maxLength={100}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="tags" className="block text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+              タグ
+            </label>
+            <input
+              id="tags"
+              type="text"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              placeholder="#思考 #アイデア #メモ"
+              className="w-full px-5 py-3 text-sm rounded-2xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-gray-300"
+            />
+            <p className="text-[9px] text-gray-400 ml-1">スペースかカンマで区切って入力してください</p>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
