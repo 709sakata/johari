@@ -1,4 +1,4 @@
-import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment } from '../firebase';
+import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc } from '../firebase';
 import { useCollection, useDocument } from 'react-firebase-hooks/firestore';
 import { Scrap, Comment, OperationType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -23,6 +23,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkPreview } from './LinkPreview';
+import { ScrapMention } from './ScrapMention';
 import { toast } from 'sonner';
 import { DIVERSE_EMOJIS } from '../constants/emojis';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
@@ -31,6 +32,7 @@ interface ScrapThreadProps {
   scrap: Scrap;
   onBack: () => void;
   onSelectUser?: (userId: string) => void;
+  onSelectScrap?: (scrap: Scrap) => void;
 }
 
 function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectUser }: { authorId: string, authorName: string, authorPhoto: string | null, createdAt: any, onSelectUser?: (userId: string) => void }) {
@@ -76,7 +78,7 @@ function BioDisplay({ userId, className }: { userId: string, className?: string 
   return <ExpandableBio bio={bio} className={className} />;
 }
 
-export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: ScrapThreadProps) {
+export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelectScrap }: ScrapThreadProps) {
   const [scrapValue, scrapLoading, scrapError] = useDocument(doc(db, `scraps/${initialScrap.id}`));
   const [commentsValue, loading, error] = useCollection(
     query(collection(db, `scraps/${initialScrap.id}/comments`), orderBy('createdAt', 'asc'))
@@ -787,6 +789,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                   scrapStatus={scrap.status}
                   setDeletingCommentId={setDeletingCommentId}
                   onSelectUser={onSelectUser}
+                  onSelectScrap={onSelectScrap}
                 />
               ))}
             </div>
@@ -1047,6 +1050,7 @@ function CommentItem({
   scrapStatus,
   setDeletingCommentId,
   onSelectUser,
+  onSelectScrap,
   isReply = false
 }: any) {
   const [isReplying, setIsReplying] = useState(false);
@@ -1231,6 +1235,30 @@ function CommentItem({
                 },
                 a: ({ node, ...props }) => {
                   const isUrl = props.href && (props.href.startsWith('http://') || props.href.startsWith('https://'));
+                  const isScrapMention = props.href && props.href.startsWith('/scraps/');
+                  
+                  if (isScrapMention && props.href) {
+                    const scrapId = props.href.split('/').pop() || '';
+                    return (
+                      <ScrapMention 
+                        scrapId={scrapId} 
+                        className="my-1" 
+                        onClick={async () => {
+                          if (onSelectScrap) {
+                            try {
+                              const scrapDoc = await getDoc(doc(db, 'scraps', scrapId));
+                              if (scrapDoc.exists()) {
+                                onSelectScrap({ id: scrapDoc.id, ...scrapDoc.data() } as Scrap);
+                              }
+                            } catch (error) {
+                              console.error('Error selecting mentioned scrap:', error);
+                            }
+                          }
+                        }}
+                      />
+                    );
+                  }
+
                   if (isUrl && props.href) {
                     return (
                       <span className="block not-prose my-4">
@@ -1339,6 +1367,7 @@ function CommentItem({
               scrapStatus={scrapStatus}
               setDeletingCommentId={setDeletingCommentId}
               onSelectUser={onSelectUser}
+              onSelectScrap={onSelectScrap}
               isReply={true}
             />
           ))}

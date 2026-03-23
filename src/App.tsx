@@ -352,6 +352,10 @@ export default function App() {
                         setActiveTab('user');
                         window.history.pushState({}, '', `/users/${userId}`);
                       }}
+                      onSelectScrap={(scrap) => {
+                        setSelectedScrap(scrap);
+                        window.history.pushState({}, '', `/scraps/${scrap.id}`);
+                      }}
                     />
                   </motion.div>
                 ) : (
@@ -451,6 +455,11 @@ export default function App() {
                     <ScrapThread 
                       scrap={selectedScrap} 
                       onBack={() => setSelectedScrap(null)} 
+                      onSelectScrap={(scrap) => {
+                        setSelectedScrap(scrap);
+                        setActiveTab('scraps');
+                        window.history.pushState({}, '', `/scraps/${scrap.id}`);
+                      }}
                     />
                   </motion.div>
                 ) : (

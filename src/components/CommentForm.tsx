@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { db, auth, collection, addDoc, serverTimestamp, doc, updateDoc, increment } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
-import { Send, Loader2, Eye, Edit3, Image as ImageIcon, X } from 'lucide-react';
+import { Send, Loader2, Eye, Edit3, Image as ImageIcon, X, Hash, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import TextareaAutosize from 'react-textarea-autosize';
 import ReactMarkdown from 'react-markdown';
@@ -14,7 +14,12 @@ import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { LinkPreview } from './LinkPreview';
+import { ScrapMention } from './ScrapMention';
+import { ScrapSearchModal } from './ScrapSearchModal';
+import { MentionDropdown } from './MentionDropdown';
+import getCaretCoordinates from 'textarea-caret';
 import { toast } from 'sonner';
+import { Scrap } from '../types';
 
 import { logActivity, ActivityType } from '../lib/analytics';
 
@@ -29,6 +34,11 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
+  const [isMentionModalOpen, setIsMentionModalOpen] = useState(false);
+  const [isMentioning, setIsMentioning] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [images, setImages] = useState<Record<string, string>>({});
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -161,6 +171,38 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isMentioning) {
+      if (e.key === 'Escape') {
+        setIsMentioning(false);
+        return;
+      }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter') {
+        // We'll let MentionDropdown handle these via its window listener
+        // But we must prevent default here to stop textarea from processing them
+        e.preventDefault();
+        return;
+      }
+    }
+
+    if (e.key === '@') {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const pos = textarea.selectionStart;
+        const before = content.substring(0, pos);
+        if (pos === 0 || /\s$/.test(before)) {
+          const coords = getCaretCoordinates(textarea, pos);
+          const rect = textarea.getBoundingClientRect();
+          setMentionPosition({
+            top: rect.top + coords.top - textarea.scrollTop,
+            left: rect.left + coords.left - textarea.scrollLeft
+          });
+          setMentionStartIndex(pos);
+          setIsMentioning(true);
+          setMentionQuery('');
+        }
+      }
+    }
+
     if ((e.metaKey || e.ctrlKey)) {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -178,10 +220,51 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
     }
   };
 
-  const insertMarkdown = (prefix: string, suffix: string) => {
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    setContent(newContent);
+
+    if (isMentioning) {
+      const textarea = e.target;
+      const pos = textarea.selectionStart;
+      
+      if (pos <= mentionStartIndex) {
+        setIsMentioning(false);
+        return;
+      }
+
+      const queryText = newContent.substring(mentionStartIndex + 1, pos);
+      
+      // If user types space or newline, stop mentioning
+      if (/\s/.test(queryText)) {
+        setIsMentioning(false);
+      } else {
+        setMentionQuery(queryText);
+      }
+    }
+  };
+
+  const insertMention = (scrap: Scrap) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
+    const pos = textarea.selectionStart;
+    const before = content.substring(0, mentionStartIndex);
+    const after = content.substring(pos);
+    const mention = `[${scrap.title}](/scraps/${scrap.id})`;
+    
+    setContent(before + mention + after);
+    setIsMentioning(false);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = before.length + mention.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+  const insertMarkdown = (prefix: string, suffix: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = content.substring(start, end);
@@ -258,6 +341,13 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
                     ),
                     a: ({ node, ...props }) => {
                       const isUrl = props.href && (props.href.startsWith('http://') || props.href.startsWith('https://'));
+                      const isScrapMention = props.href && props.href.startsWith('/scraps/');
+                      
+                      if (isScrapMention && props.href) {
+                        const scrapId = props.href.split('/').pop() || '';
+                        return <ScrapMention scrapId={scrapId} className="my-1" />;
+                      }
+
                       if (isUrl && props.href) {
                         return (
                           <span className="block not-prose my-4">
@@ -298,7 +388,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
               <TextareaAutosize
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={handleContentChange}
                 onKeyDown={handleKeyDown}
                 placeholder={parentId ? "返信を入力..." : "コメントを入力... (Markdown対応)"}
                 minRows={parentId ? 4 : 8}
@@ -329,6 +419,15 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
               {isCompressing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
               <span className="hidden sm:inline">{isCompressing ? '圧縮中...' : '写真を添付'}</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setIsMentionModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-bold text-sm"
+            >
+              <AtSign className="w-4 h-4" />
+              <span className="hidden sm:inline">メンション</span>
+            </button>
           </div>
 
           <button
@@ -341,6 +440,37 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
           </button>
         </div>
       </form>
+
+      <ScrapSearchModal
+        isOpen={isMentionModalOpen}
+        onClose={() => setIsMentionModalOpen(false)}
+        onSelect={(scrap) => {
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const pos = textarea.selectionStart;
+            const before = content.substring(0, pos);
+            // If the last character is '@', replace it
+            if (before.endsWith('@')) {
+              setMentionStartIndex(pos - 1);
+              insertMention(scrap);
+            } else {
+              insertMarkdown(`[${scrap.title}](/scraps/${scrap.id})`, '');
+            }
+          } else {
+            insertMarkdown(`[${scrap.title}](/scraps/${scrap.id})`, '');
+          }
+          setIsMentionModalOpen(false);
+        }}
+      />
+
+      {isMentioning && (
+        <MentionDropdown
+          searchTerm={mentionQuery}
+          position={mentionPosition}
+          onSelect={insertMention}
+          onClose={() => setIsMentioning(false)}
+        />
+      )}
     </div>
   );
 }
