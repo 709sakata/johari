@@ -664,31 +664,39 @@ async function startServer() {
         next(e);
       }
     });
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath, { index: false })); // Disable default index serving
-    
-    app.get("*", async (req, res) => {
-      try {
-        const indexPath = path.join(distPath, "index.html");
-        if (!fs.existsSync(indexPath)) {
-          return res.status(404).send("Not Found");
-        }
-        let html = fs.readFileSync(indexPath, "utf-8");
-        
-        // Inject SEO tags
-        html = await injectSEO(html, req);
-        
-        res.send(html);
-      } catch (err) {
-        console.error("Error serving index.html:", err);
-        res.status(500).send("Internal Server Error");
-      }
-    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+// In production (including Vercel), register static routes
+if (process.env.NODE_ENV === "production") {
+  const distPath = path.join(process.cwd(), "dist");
+  app.use(express.static(distPath, { index: false }));
+
+  app.get("*", async (req, res, next) => {
+    // Skip if it's an API route or has an extension (handled by express.static or other routes)
+    if (req.url.startsWith('/api') || req.url.startsWith('/rss.xml') || req.url.includes('.')) {
+      return next();
+    }
+    
+    try {
+      const indexPath = path.join(distPath, "index.html");
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).send("Not Found");
+      }
+      let html = fs.readFileSync(indexPath, "utf-8");
+      
+      // Inject SEO tags
+      html = await injectSEO(html, req);
+      
+      res.send(html);
+    } catch (err) {
+      console.error("Error serving index.html:", err);
+      res.status(500).send("Internal Server Error");
+    }
   });
 }
 

@@ -1,17 +1,12 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "dist/**",
-          "firebase-applet-config.json"
-        ]
-      }
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": [
+        "dist/**",
+        "firebase-applet-config.json"
+      ]
     }
-  ],
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -30,7 +25,7 @@
       "destination": "/api/index.ts"
     },
     {
-      "source": "/((?!assets/|favicon.ico|sw.js).* )",
+      "source": "/((?!assets/|favicon.ico|sw.js).*)",
       "destination": "/api/index.ts"
     }
   ]
