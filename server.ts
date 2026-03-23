@@ -9,6 +9,10 @@ import { Feed } from "feed";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, query, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
 import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const parser = new Parser();
@@ -35,8 +39,19 @@ if (fs.existsSync(firebaseConfigPath)) {
 
 if (config) {
   try {
-    firebaseApp = initializeApp(config, "rss-feed-app");
-    db = getFirestore(firebaseApp, config.firestoreDatabaseId);
+    const { getApps, getApp, initializeApp: initApp } = await import("firebase/app");
+    const { getFirestore: getFS } = await import("firebase/firestore");
+    
+    if (getApps().length === 0) {
+      firebaseApp = initApp(config, "rss-feed-app");
+    } else {
+      try {
+        firebaseApp = getApp("rss-feed-app");
+      } catch {
+        firebaseApp = initApp(config, "rss-feed-app");
+      }
+    }
+    db = getFS(firebaseApp, config.firestoreDatabaseId);
   } catch (error) {
     console.error("Failed to initialize Firebase Client for RSS:", error);
   }
@@ -673,24 +688,44 @@ async function startServer() {
 
 // In production (including Vercel), register static routes
 if (process.env.NODE_ENV === "production") {
-  const distPath = path.join(process.cwd(), "dist");
+  const distPath = path.resolve(process.cwd(), "dist");
+  // In Vercel, the function might be in /api or root, so we check both
+  const fallbackDistPath = path.resolve(__dirname, "dist");
+  const apiFallbackDistPath = path.resolve(__dirname, "../dist");
+  
   app.use(express.static(distPath, { index: false }));
+  app.use(express.static(fallbackDistPath, { index: false }));
+  app.use(express.static(apiFallbackDistPath, { index: false }));
 
   app.get("*", async (req, res, next) => {
-    // Skip if it's an API route or has an extension (handled by express.static or other routes)
+    // Skip if it's an API route or has an extension
     if (req.url.startsWith('/api') || req.url.startsWith('/rss.xml') || req.url.includes('.')) {
       return next();
     }
     
     try {
-      const indexPath = path.join(distPath, "index.html");
+      let indexPath = path.join(distPath, "index.html");
       if (!fs.existsSync(indexPath)) {
-        return res.status(404).send("Not Found");
+        indexPath = path.join(fallbackDistPath, "index.html");
       }
+      if (!fs.existsSync(indexPath)) {
+        indexPath = path.join(apiFallbackDistPath, "index.html");
+      }
+      
+      if (!fs.existsSync(indexPath)) {
+        console.error(`index.html not found at ${distPath}, ${fallbackDistPath}, or ${apiFallbackDistPath}`);
+        return res.status(404).send("Application Shell Not Found");
+      }
+      
       let html = fs.readFileSync(indexPath, "utf-8");
       
       // Inject SEO tags
-      html = await injectSEO(html, req);
+      try {
+        html = await injectSEO(html, req);
+      } catch (seoError) {
+        console.error("SEO Injection failed:", seoError);
+        // Continue with original HTML if SEO fails
+      }
       
       res.send(html);
     } catch (err) {
