@@ -6,7 +6,7 @@ import { useCollection, useDocumentData } from 'react-firebase-hooks/firestore';
 import { Scrap, User as UserProfile, UserLink } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommentCount } from './CommentCount';
@@ -39,6 +39,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [newLinkInput, setNewLinkInput] = useState('');
   const [isLinksDialogOpen, setIsLinksDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -183,6 +184,61 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
     setCopied(true);
     toast.success('埋め込みコードをコピーしました');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExportJSON = async () => {
+    if (!authUser || isExporting) return;
+    setIsExporting(true);
+    const toastId = toast.loading('データをエクスポート中...');
+
+    try {
+      const exportData = {
+        user: {
+          uid: authUser.uid,
+          displayName: profile?.displayName || authUser.displayName,
+          bio: profile?.bio || '',
+          links: profile?.links || [],
+        },
+        scraps: [] as any[],
+        exportedAt: new Date().toISOString(),
+      };
+
+      // allScraps is already available from useCollection
+      for (const scrap of allScraps) {
+        const commentsQuery = query(collection(db, 'scraps', scrap.id, 'comments'), orderBy('createdAt', 'asc'));
+        const commentsSnapshot = await getDocs(commentsQuery);
+        const comments = commentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: (doc.data() as any).createdAt?.toDate().toISOString(),
+          updatedAt: (doc.data() as any).updatedAt?.toDate().toISOString(),
+        }));
+
+        exportData.scraps.push({
+          ...scrap,
+          createdAt: scrap.createdAt?.toDate().toISOString(),
+          updatedAt: scrap.updatedAt?.toDate().toISOString(),
+          comments,
+        });
+      }
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `johari-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('エクスポートが完了しました', { id: toastId });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('エクスポートに失敗しました', { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const [value, loading, error] = useCollection(
@@ -451,31 +507,47 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         </div>
 
         <div className="space-y-0">
-          {/* Tabs */}
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-t-2xl self-start w-fit">
+          {/* Tabs & Export */}
+          <div className="flex items-center justify-between gap-4 mb-0">
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-t-2xl w-fit">
+              <button
+                onClick={() => setStatusTab('open')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all",
+                  statusTab === 'open' 
+                    ? "bg-white text-emerald-600 shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                <Circle className="w-4 h-4" />
+                オープン
+              </button>
+              <button
+                onClick={() => setStatusTab('closed')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all",
+                  statusTab === 'closed' 
+                    ? "bg-white text-gray-600 shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                クローズ
+              </button>
+            </div>
+
             <button
-              onClick={() => setStatusTab('open')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all",
-                statusTab === 'open' 
-                  ? "bg-white text-emerald-600 shadow-sm" 
-                  : "text-gray-500 hover:text-gray-700"
-              )}
+              onClick={handleExportJSON}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+              title="データをJSONでエクスポート"
             >
-              <Circle className="w-4 h-4" />
-              オープン
-            </button>
-            <button
-              onClick={() => setStatusTab('closed')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all",
-                statusTab === 'closed' 
-                  ? "bg-white text-gray-600 shadow-sm" 
-                  : "text-gray-500 hover:text-gray-700"
+              {isExporting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
               )}
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              クローズ
+              JSON出力
             </button>
           </div>
         
