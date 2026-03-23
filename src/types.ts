@@ -18,6 +18,7 @@ export interface User {
 export interface Scrap {
   id: string;
   title: string;
+  content?: string; // Added
   status: 'open' | 'closed';
   authorId: string;
   authorName: string;
@@ -66,4 +67,46 @@ export interface FirestoreErrorInfo {
       photoUrl: string | null;
     }[];
   }
+}
+
+export interface EvolutionLog {
+  timestamp: Timestamp;
+  scrapId?: string;
+  changeDescription: string;
+}
+
+export interface UnresolvedConflict {
+  title: string;
+  deepAnalysis: string;
+  groundingFact: string;
+}
+
+export interface IdentityTask {
+  id: string;
+  userId: string;
+  type: 'digital-twin-edit';
+  question: string;
+  scrapId?: string;
+  steps?: {
+    observation: string;
+    gap: string;
+    question: string;
+  };
+  status: 'pending' | 'completed' | 'cancelled';
+  answer?: string;
+  createdAt: any;
+  updatedAt?: any;
+  completedAt?: any;
+}
+
+export interface IdentityState {
+  id: string;
+  userId: string;
+  coreLogic: string;
+  publicNarrative: string;
+  shadowNarrative: string;
+  unresolvedConflict: UnresolvedConflict;
+  evolutionLog: EvolutionLog[];
+  lastScrapId?: string; // To track where we left off in the incremental loop
+  updatedAt: Timestamp;
 }

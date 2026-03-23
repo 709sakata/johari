@@ -39,6 +39,40 @@ export function Auth({ onMyPageClick }: AuthProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleBioKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey)) {
+      if (e.key === 'b') {
+        e.preventDefault();
+        insertMarkdownIntoBio('**', '**', e.currentTarget);
+      } else if (e.key === 'i') {
+        e.preventDefault();
+        insertMarkdownIntoBio('*', '*', e.currentTarget);
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        insertMarkdownIntoBio('[', '](url)', e.currentTarget);
+      }
+    }
+  };
+
+  const insertMarkdownIntoBio = (prefix: string, suffix: string, textarea: HTMLTextAreaElement) => {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = bioContent.substring(start, end);
+    const newText = bioContent.substring(0, start) + prefix + selectedText + suffix + bioContent.substring(end);
+    
+    setBioContent(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      if (start === end) {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length + selectedText.length + suffix.length, start + prefix.length + selectedText.length + suffix.length);
+      }
+    }, 0);
+  };
+
   const handleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -130,6 +164,7 @@ export function Auth({ onMyPageClick }: AuthProps) {
                   <textarea
                     value={bioContent}
                     onChange={(e) => setBioContent(e.target.value)}
+                    onKeyDown={handleBioKeyDown}
                     className="w-full text-xs p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     placeholder="自己紹介を入力..."
                     rows={3}

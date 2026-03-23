@@ -11,39 +11,14 @@ import { PublicProfile } from './components/PublicProfile';
 import { QASection } from './components/QASection';
 import { QADetail } from './components/QADetail';
 import { Scrap } from './types';
-import { LayoutGrid, MessageSquare, Loader2, User as UserIcon, Rss, HelpCircle } from 'lucide-react';
+import { MessageSquare, Loader2, User as UserIcon, Rss, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 import { Helmet } from 'react-helmet-async';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
-function QACounter() {
-  const [count, setCount] = useState(0);
-  const user = auth.currentUser;
-
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'identity_tasks'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'pending')
-    );
-    return onSnapshot(q, (snapshot) => {
-      setCount(snapshot.size);
-    });
-  }, [user]);
-
-  if (count === 0) return null;
-
-  return (
-    <div className="relative group cursor-help" title={`${count}件の未回答の問いがあります`}>
-      <HelpCircle className="w-5 h-5 text-indigo-600" />
-      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse">
-        {count}
-      </span>
-    </div>
-  );
-}
+import { logActivity, ActivityType } from './lib/analytics';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -51,13 +26,100 @@ export default function App() {
   const [selectedScrap, setSelectedScrap] = useState<Scrap | null>(null);
   const [selectedQATaskId, setSelectedQATaskId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'scraps' | 'qa' | 'mypage' | 'user' | 'new-scrap'>('scraps');
+  const [activeTab, setActiveTab] = useState<'scraps' | 'qa' | 'mypage' | 'user' | 'new-scrap' | 'analytics'>('scraps');
   const [isEmbed, setIsEmbed] = useState(false);
+
+  const isAdmin = user?.email === 'naoki.sakata@hopin.co.jp';
+
+  // Track page views
+  useEffect(() => {
+    if (!isAuthReady) return;
+    const path = window.location.pathname + window.location.search;
+    logActivity(ActivityType.PAGE_VIEW, path, undefined, {
+      tab: activeTab,
+      scrapId: selectedScrap?.id,
+      qaTaskId: selectedQATaskId,
+      userId: selectedUserId
+    });
+  }, [activeTab, selectedScrap?.id, selectedQATaskId, selectedUserId, isAuthReady]);
+
+  const getPageTitle = () => {
+    if (activeTab === 'mypage') {
+      return 'マイページ | じょはり';
+    }
+    if (activeTab === 'scraps' && !selectedScrap) {
+      return 'スレッド一覧 | じょはり';
+    }
+    if (activeTab === 'qa' && !selectedQATaskId) {
+      return 'Q&A一覧 | じょはり';
+    }
+    return 'じょはり | まだ知らない自分に出会う思考の窓';
+  };
+
+  const getPageDescription = () => {
+    return 'じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。';
+  };
 
   // Scroll to top on navigation
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [selectedScrap?.id, activeTab, selectedUserId]);
+
+  useEffect(() => {
+    const handlePopState = async () => {
+      const path = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      
+      if (path === '/') {
+        setSelectedScrap(null);
+        setSelectedQATaskId(null);
+        setSelectedUserId(null);
+        setActiveTab('scraps');
+        return;
+      }
+
+      if (path.startsWith('/scraps/')) {
+        const scrapId = path.split('/scraps/')[1];
+        if (scrapId) {
+          try {
+            const scrapDoc = await getDoc(doc(db, 'scraps', scrapId));
+            if (scrapDoc.exists()) {
+              setSelectedScrap({ id: scrapDoc.id, ...scrapDoc.data() } as Scrap);
+              setActiveTab('scraps');
+            }
+          } catch (error) {
+            console.error('Error fetching scrap on popstate:', error);
+          }
+        }
+      } else if (path.startsWith('/users/')) {
+        const userId = path.split('/users/')[1];
+        if (userId) {
+          setSelectedUserId(userId);
+          setActiveTab('user');
+          setSelectedScrap(null);
+        }
+      } else if (path.startsWith('/qa/')) {
+        const qaId = path.split('/qa/')[1];
+        if (qaId) {
+          setSelectedQATaskId(qaId);
+          setActiveTab('qa');
+          setSelectedScrap(null);
+        }
+      } else if (path === '/mypage') {
+        setActiveTab('mypage');
+        setSelectedScrap(null);
+      } else if (path === '/new-scrap') {
+        setActiveTab('new-scrap');
+        setSelectedScrap(null);
+      } else if (path === '/analytics') {
+        setActiveTab('analytics');
+        setSelectedScrap(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -106,6 +168,10 @@ export default function App() {
         setSelectedUserId(userId);
         setActiveTab('user');
       }
+
+      if (path === '/analytics') {
+        setActiveTab('analytics');
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -123,13 +189,13 @@ export default function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900">
         <Helmet>
-          <title>じょはり | まだ知らない自分に出会う思考の窓</title>
-          <meta name="description" content="じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。" />
-          <meta property="og:title" content="じょはり | まだ知らない自分に出会う思考の窓" />
-          <meta property="og:description" content="思考を整理し、対話を通じて新しい視点を発見するためのプラットフォーム。" />
-          <meta property="og:url" content={window.location.origin} />
-          <meta name="twitter:title" content="じょはり | まだ知らない自分に出会う思考の窓" />
-          <meta name="twitter:description" content="思考を整理し、対話を通じて新しい視点を発見するためのプラットフォーム。" />
+          <title>{getPageTitle()}</title>
+          <meta name="description" content={getPageDescription()} />
+          <meta property="og:title" content={getPageTitle()} />
+          <meta property="og:description" content={getPageDescription()} />
+          <meta property="og:url" content={window.location.origin + window.location.pathname} />
+          <meta name="twitter:title" content={getPageTitle()} />
+          <meta name="twitter:description" content={getPageDescription()} />
         </Helmet>
         {/* Header */}
         {!isEmbed && (
@@ -172,6 +238,26 @@ export default function App() {
                     <MessageSquare className="w-3.5 h-3.5" />
                     スレッド
                   </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setSelectedScrap(null);
+                        setSelectedQATaskId(null);
+                        setSelectedUserId(null);
+                        setActiveTab('analytics');
+                        window.history.pushState({}, '', '/analytics');
+                      }}
+                      className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                        activeTab === 'analytics' 
+                          ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' 
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      分析
+                    </button>
+                  )}
+{/* 
                   <button
                     onClick={() => {
                       setSelectedScrap(null);
@@ -186,13 +272,12 @@ export default function App() {
                         : 'text-gray-400 hover:text-gray-600'
                     }`}
                   >
-                    <HelpCircle className="w-3.5 h-3.5" />
                     Q&A
                   </button>
+                  */}
                 </nav>
 
                 <div className="flex items-center gap-3">
-                  {user && <QACounter />}
                   <Auth onMyPageClick={() => {
                     setActiveTab('mypage');
                     setSelectedScrap(null);
@@ -237,7 +322,17 @@ export default function App() {
         <main className={isEmbed ? "max-w-6xl mx-auto px-4 py-4" : "max-w-6xl mx-auto px-4 py-8"}>
           <div className="space-y-8">
             <AnimatePresence mode="wait">
-              {activeTab === 'scraps' ? (
+              {activeTab === 'analytics' ? (
+                <motion.div
+                  key="analytics"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <AnalyticsDashboard />
+                </motion.div>
+              ) : activeTab === 'scraps' ? (
                 selectedScrap ? (
                   <motion.div
                     key="thread"
@@ -299,7 +394,7 @@ export default function App() {
                     />
                   </motion.div>
                 )
-              ) : activeTab === 'qa' ? (
+              ) : /* activeTab === 'qa' ? (
                 selectedQATaskId ? (
                   <motion.div
                     key="qa-detail"
@@ -324,13 +419,27 @@ export default function App() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <QASection onSelectTask={(taskId) => {
-                      setSelectedQATaskId(taskId);
-                      window.history.pushState({}, '', `/qa/${taskId}`);
-                    }} />
+                    <QASection 
+                      onSelectTask={(taskId) => {
+                        setSelectedQATaskId(taskId);
+                        window.history.pushState({}, '', `/qa/${taskId}`);
+                      }} 
+                      onSelectScrap={async (scrapId) => {
+                        try {
+                          const scrapDoc = await getDoc(doc(db, 'scraps', scrapId));
+                          if (scrapDoc.exists()) {
+                            setSelectedScrap({ id: scrapDoc.id, ...scrapDoc.data() } as Scrap);
+                            setActiveTab('scraps');
+                            window.history.pushState({}, '', `/scraps/${scrapId}`);
+                          }
+                        } catch (error) {
+                          console.error('Error opening scrap from QA:', error);
+                        }
+                      }}
+                    />
                   </motion.div>
                 )
-              ) : activeTab === 'mypage' ? (
+              ) : */ activeTab === 'mypage' ? (
                 selectedScrap ? (
                   <motion.div
                     key="thread-mypage"
@@ -465,6 +574,24 @@ export default function App() {
               <MessageSquare className="w-5 h-5" />
               <span className="text-[10px] font-black uppercase tracking-widest">スレッド</span>
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setSelectedScrap(null);
+                  setSelectedQATaskId(null);
+                  setSelectedUserId(null);
+                  setActiveTab('analytics');
+                  window.history.pushState({}, '', '/analytics');
+                }}
+                className={`flex flex-col items-center gap-1 transition-all ${
+                  activeTab === 'analytics' ? 'text-indigo-600' : 'text-gray-400'
+                }`}
+              >
+                <TrendingUp className="w-5 h-5" />
+                <span className="text-[10px] font-black uppercase tracking-widest">分析</span>
+              </button>
+            )}
+{/*
             <button
               onClick={() => {
                 setSelectedScrap(null);
@@ -478,11 +605,10 @@ export default function App() {
               }`}
             >
               <div className="relative">
-                <HelpCircle className="w-5 h-5" />
-                {user && <QACounterBadge />}
               </div>
               <span className="text-[10px] font-black uppercase tracking-widest">Q&A</span>
             </button>
+            */}
             <button
               onClick={() => {
                 setActiveTab('mypage');
@@ -502,30 +628,5 @@ export default function App() {
         )}
       </div>
     </ErrorBoundary>
-  );
-}
-
-function QACounterBadge() {
-  const [count, setCount] = useState(0);
-  const user = auth.currentUser;
-
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'identity_tasks'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'pending')
-    );
-    return onSnapshot(q, (snapshot) => {
-      setCount(snapshot.size);
-    });
-  }, [user]);
-
-  if (count === 0) return null;
-
-  return (
-    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-white text-[7px] font-black rounded-full flex items-center justify-center border border-white">
-      {count}
-    </span>
   );
 }

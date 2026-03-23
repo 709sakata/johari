@@ -381,13 +381,13 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
   return (
     <div className="max-w-6xl mx-auto pb-20">
       <Helmet>
-        <title>{scrap.title} | じょはり</title>
+        <title>{scrap?.title ? `${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'}</title>
         <meta name="description" content={description} />
-        <meta property="og:title" content={`${scrap.title} | じょはり`} />
+        <meta property="og:title" content={scrap?.title ? `${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={url} />
-        <meta name="twitter:title" content={`${scrap.title} | じょはり`} />
+        <meta name="twitter:title" content={scrap?.title ? `${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
         <script type="application/ld+json">
@@ -400,7 +400,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
           className="flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6 transition-colors group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">一覧に戻る</span>
+          <span className="font-medium hidden sm:inline">一覧に戻る</span>
         </button>
       </div>
 
@@ -424,12 +424,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                     {scrap.status === 'open' ? (
                       <>
                         <Lock className="w-4 h-4" />
-                        スレッドを閉じる
+                        <span className="hidden sm:inline">スレッドを閉じる</span>
                       </>
                     ) : (
                       <>
                         <Unlock className="w-4 h-4" />
-                        スレッドを再開する
+                        <span className="hidden sm:inline">スレッドを再開する</span>
                       </>
                     )}
                   </button>
@@ -748,12 +748,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser }: Scrap
                   {scrap.status === 'open' ? (
                     <>
                       <Lock className="w-4 h-4" />
-                      スレッドを閉じる
+                      <span className="hidden sm:inline">スレッドを閉じる</span>
                     </>
                   ) : (
                     <>
                       <Unlock className="w-4 h-4" />
-                      スレッドを再開する
+                      <span className="hidden sm:inline">スレッドを再開する</span>
                     </>
                   )}
                 </button>
@@ -975,6 +975,25 @@ function CommentItem({
     return content;
   };
 
+  const insertMarkdownIntoEditing = (prefix: string, suffix: string, textarea: HTMLTextAreaElement) => {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = editingCommentContent.substring(start, end);
+    const newText = editingCommentContent.substring(0, start) + prefix + selectedText + suffix + editingCommentContent.substring(end);
+    
+    setEditingCommentContent(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      if (start === end) {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length + selectedText.length + suffix.length, start + prefix.length + selectedText.length + suffix.length);
+      }
+    }, 0);
+  };
+
   const copyCommentAsMarkdown = () => {
     const commentDate = comment.createdAt ? comment.createdAt.toDate().toLocaleString('ja-JP') : '不明';
     let markdown = `## ${comment.authorName} (${commentDate})\n`;
@@ -1050,15 +1069,27 @@ function CommentItem({
               value={editingCommentContent}
               onChange={(e) => setEditingCommentContent(e.target.value)}
               onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault();
-                  handleUpdateComment(comment.id);
+                if ((e.metaKey || e.ctrlKey)) {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleUpdateComment(comment.id);
+                  } else if (e.key === 'b') {
+                    e.preventDefault();
+                    insertMarkdownIntoEditing('**', '**', e.currentTarget);
+                  } else if (e.key === 'i') {
+                    e.preventDefault();
+                    insertMarkdownIntoEditing('*', '*', e.currentTarget);
+                  } else if (e.key === 'k') {
+                    e.preventDefault();
+                    insertMarkdownIntoEditing('[', '](url)', e.currentTarget);
+                  }
                 }
               }}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-sm"
               minRows={4}
               maxRows={20}
               autoFocus
+              maxLength={50000}
             />
             <div className="flex justify-end gap-2">
               <button
@@ -1135,7 +1166,7 @@ function CommentItem({
                 className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-600 transition-colors"
               >
                 <Reply className="w-3.5 h-3.5" />
-                返信を追加
+                <span className="hidden sm:inline">返信を追加</span>
               </button>
             )}
             {!isEditing && (
@@ -1163,7 +1194,7 @@ function CommentItem({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className={`border-t border-gray-50 bg-gray-50/30 p-6 ${isReply ? 'mt-2' : ''}`}
+            className={`border-t border-gray-50 bg-gray-50/30 p-3 sm:p-6 ${isReply ? 'mt-2' : ''}`}
           >
             <CommentForm 
               scrapId={scrapId} 

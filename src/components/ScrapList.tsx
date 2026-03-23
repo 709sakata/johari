@@ -130,6 +130,19 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
 
                 {/* Meta Info */}
                 <div className="flex items-center gap-3 text-gray-400">
+                  <div className="flex items-center gap-1.5">
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-gray-400"
+                    )} />
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider",
+                      scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
+                    )}>
+                      {scrap.status === 'open' ? 'Open' : 'Closed'}
+                    </span>
+                  </div>
+
                   <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                     <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}

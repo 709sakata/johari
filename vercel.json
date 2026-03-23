@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "dist/**",
+          "firebase-applet-config.json"
+        ]
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/rss.xml",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/scraps/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/users/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/((?!assets/|favicon.ico|sw.js).* )",
+      "destination": "/api/index.ts"
+    }
+  ]
+}

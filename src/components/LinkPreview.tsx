@@ -6,6 +6,7 @@ interface LinkPreviewData {
   description?: string;
   image?: string;
   url: string;
+  siteName?: string;
 }
 
 export function LinkPreview({ url }: { url: string }) {
@@ -45,6 +46,12 @@ export function LinkPreview({ url }: { url: string }) {
 
   // Fallback data if fetch failed
   const displayData = data || { url, title: url };
+  const hostname = new URL(url).hostname;
+  
+  // If title is just the URL, try to show hostname instead for a cleaner look
+  const displayTitle = (displayData.title === url || !displayData.title) 
+    ? hostname 
+    : displayData.title;
 
   return (
     <a 
@@ -58,7 +65,7 @@ export function LinkPreview({ url }: { url: string }) {
           <div className="sm:w-48 h-32 sm:h-auto overflow-hidden bg-gray-50 flex-shrink-0">
             <img 
               src={displayData.image} 
-              alt={displayData.title} 
+              alt={displayTitle} 
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               referrerPolicy="no-referrer"
             />
@@ -68,11 +75,11 @@ export function LinkPreview({ url }: { url: string }) {
           <div className="flex items-center gap-1.5 mb-1">
             <ExternalLink className="w-3 h-3 text-blue-500" />
             <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest truncate">
-              {new URL(url).hostname}
+              {displayData.siteName || hostname}
             </span>
           </div>
-          <h4 className="text-sm font-black text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
-            {displayData.title || url}
+          <h4 className="text-sm font-black text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            {displayTitle}
           </h4>
           {displayData.description && (
             <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">

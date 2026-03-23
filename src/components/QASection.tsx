@@ -1,46 +1,43 @@
 import { useState, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { db, auth } from '../firebase';
-import { collection, query, where, orderBy, limit, getDocs, addDoc, serverTimestamp, onSnapshot, Timestamp, deleteDoc, doc as firestoreDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, serverTimestamp, onSnapshot, Timestamp, deleteDoc, doc as firestoreDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, CheckCircle2, Loader2, RefreshCw, HelpCircle, ShieldCheck, AlertCircle, Edit2, Trash2 } from 'lucide-react';
+import { Sparkles, CheckCircle2, Loader2, RefreshCw, HelpCircle, ShieldCheck, AlertCircle, Edit2, Trash2, Fingerprint, History, Zap, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
-
-interface IdentityTask {
-  id: string;
-  type: 'fact-check' | 'meta-cognition' | 'audit';
-  question: string;
-  steps?: {
-    observation: string;
-    logicGap: string;
-    distortion: string;
-    syncTask: string;
-  };
-  status: 'pending' | 'completed';
-  answer?: string;
-  createdAt: any;
-  updatedAt?: any;
-}
+import { updateIdentityState, getLatestIdentityState } from '../services/identityService';
+import { qaService } from '../services/qaService';
+import { IdentityState, OperationType, IdentityTask } from '../types';
+import { handleFirestoreError } from '../lib/firestore';
 
 interface QASectionProps {
   userId?: string;
   onSelectTask?: (taskId: string) => void;
+  onSelectScrap?: (scrapId: string) => void;
 }
 
-export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) {
+export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: QASectionProps) {
   const [tasks, setTasks] = useState<IdentityTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [answeringTaskId, setAnsweringTaskId] = useState<string | null>(null);
   const [syncingTaskId, setSyncingTaskId] = useState<string | null>(null);
   const [answerInput, setAnswerInput] = useState('');
+  const [identityState, setIdentityState] = useState<IdentityState | null>(null);
+  const [showTwin, setShowTwin] = useState(false);
   const currentUser = auth.currentUser;
   const targetUserId = propUserId || currentUser?.uid;
   const isOwner = currentUser?.uid === targetUserId;
 
   useEffect(() => {
     if (!targetUserId) return;
+
+    // Fetch Identity State
+    const fetchState = async () => {
+      const state = await getLatestIdentityState(targetUserId);
+      setIdentityState(state);
+    };
+    fetchState();
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -68,6 +65,43 @@ export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) 
     return () => unsubscribe();
   }, [targetUserId]);
 
+  const handleAnswerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey)) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAnswer(answeringTaskId!);
+      } else if (e.key === 'b') {
+        e.preventDefault();
+        insertMarkdownIntoAnswer('**', '**', e.currentTarget);
+      } else if (e.key === 'i') {
+        e.preventDefault();
+        insertMarkdownIntoAnswer('*', '*', e.currentTarget);
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        insertMarkdownIntoAnswer('[', '](url)', e.currentTarget);
+      }
+    }
+  };
+
+  const insertMarkdownIntoAnswer = (prefix: string, suffix: string, textarea: HTMLTextAreaElement) => {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = answerInput.substring(start, end);
+    const newText = answerInput.substring(0, start) + prefix + selectedText + suffix + answerInput.substring(end);
+    
+    setAnswerInput(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      if (start === end) {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length + selectedText.length + suffix.length, start + prefix.length + selectedText.length + suffix.length);
+      }
+    }, 0);
+  };
+
   const generateTasks = async () => {
     if (!currentUser || !isOwner) return;
 
@@ -88,134 +122,21 @@ export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) 
     setIsGenerating(true);
 
     try {
-      // 0. Clear existing pending tasks to ensure a "fundamental" refresh
-      const { deleteDoc, doc: firestoreDoc } = await import('firebase/firestore');
-      const pendingQuery = query(
-        collection(db, 'identity_tasks'),
-        where('userId', '==', currentUser.uid),
-        where('status', '==', 'pending')
-      );
-      const pendingSnapshot = await getDocs(pendingQuery);
-      const deletePromises = pendingSnapshot.docs.map(d => deleteDoc(firestoreDoc(db, 'identity_tasks', d.id)));
-      await Promise.all(deletePromises);
+      // 1. Update Identity State (Incremental Loop)
+      const newState = await updateIdentityState(currentUser.uid);
+      if (!newState) throw new Error("Failed to update identity state");
+      setIdentityState(newState);
 
-      // 1. Gather context (Profile + Scraps)
-      const scrapsQuery = query(
-        collection(db, 'scraps'),
-        where('authorId', '==', currentUser.uid),
-        orderBy('updatedAt', 'desc'),
-        limit(5)
-      );
-      const scrapsSnapshot = await getDocs(scrapsQuery);
-      const scrapsText = scrapsSnapshot.docs.length > 0 
-        ? scrapsSnapshot.docs.map(doc => doc.data().title).join('\n')
-        : "（思考ログはまだ記録されていません）";
+      // 2. Clear existing pending tasks
+      await qaService.clearPendingTasks(currentUser.uid);
 
-      const { getDoc, doc: fireDoc } = await import('firebase/firestore');
-      const userDoc = await getDoc(fireDoc(db, 'users', currentUser.uid));
-      const userData = userDoc.exists() ? userDoc.data() : null;
-      
-      const profileText = [
-        `Name: ${userData?.displayName || currentUser.displayName || 'Anonymous'}`,
-        `Bio: ${userData?.bio || '（自己紹介未設定）'}`,
-        `Links: ${userData?.links?.length ? userData.links.join(', ') : '（リンクなし）'}`
-      ].join('\n');
-
-      // 2. Call Gemini
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `
-          # Role
-          あなたは「Q&A 監査官」。
-          ユーザーの公開情報（Persona）と内面ログ（Scraps）を冷徹に突き合わせ、その「矛盾の構造」を解体し、ユーザーが直視せざるを得ない「問い（Q&A）」を提示します。
-
-          # 実行命令（直列思考プロセス）
-          あなたは以下のSTEPを順番に、脳内で実行してから最終回答を生成してください。
-
-          STEP 1 【データ・スキャン】:
-            - 外部プロフィールから「社会向けの顔（建前）」を特定する。
-            - スレッドから「無意識の願望/恐怖（本音）」を特定する。
-          STEP 2 【乖離の同定】:
-            - STEP 1で見つけた「建前」と「本音」が最も激しく衝突しているポイントを1点だけ選ぶ。
-          STEP 3 【監査モードの選択】:
-            - その衝突が「対外的な誤解」を生んでいるなら [Fact-Check] モード。
-            - その衝突が「自己欺瞞（自分への嘘）」であるなら [Meta] モードを選択。
-          STEP 4 【言語化の鋭化】:
-            - 選択したモードに基づき、あえて「痛い」言葉（隠蔽、腐心等）を選定し、ロジカルに構成する。
-
-          # Analysis Logic
-          1. **[Persona vs Shadow]**: プロフィールが主張する「理想像」と、ログに漏れ出ている「執着・不安・矛盾」を特定せよ。
-          2. **[Paradox Extraction]**: 「〇〇を追求することで、実は△△から逃避している」といった、ユーザー自身も無自覚な自己欺瞞（セルフ・デセプション）を抽出せよ。
-          3. **[Logical Closing]**: 逃げ場のない論理で、その矛盾を言語化せよ。
-
-          # Output Format (日本語のみ)
-          以下の2つのスタイルのうち、より「刺さる」方を1つ選択して出力せよ。
-
-          ## Style A: Meta (内面監査)
-          【思考のバグ】
-          （ユーザーの思考のデッドロックや、無意識の回避パターンを鋭い比喩を用いて指摘せよ）
-          
-          【問い】
-          （ユーザーの価値観の根底を揺さぶる、パラドキシカルな問いを提示せよ）
-
-          ## Style B: Fact-Check (外部監査)
-          【観測されたペルソナ】
-          （第三者の視点から見た、ユーザーの矛盾した立ち振る舞いに「レッテル」を貼れ）
-          
-          【監査報告】
-          （なぜそのように見えるのか、外部データと内部データの乖離を論理的に解体せよ）
-
-          # Input Data
-          - External_Identity (Profile): 
-          ${profileText}
-          
-          - Internal_Identity_Logs (Scraps): 
-          ${scrapsText}
-
-          # Tone & Manner
-          - 執刀医のような冷徹さと、哲学者のような深遠さ。
-          - ユーザーを励まさない。共感しない。ただ「映し出す」ことに徹する。
-          - 抽象的だが鋭い言葉（例：隠蔽、腐心、零れ落ちる、不在、正当化）を効果的に使用せよ。
-          - 140文字程度の「同期クエスト（Sync Task）」を最後に作成せよ。
-
-          Return the result in JSON format:
-          {
-            "type": "meta" | "fact-check",
-            "observation": "【思考のバグ】または【観測されたペルソナ】の内容",
-            "logicGap": "【問い】または【監査報告】の内容",
-            "distortion": "この矛盾がもたらすアイデンティティの歪みについての短い解説",
-            "syncTask": "デジタルツインを更新するための具体的な問い（140文字以内）"
-          }
-        `,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-
-      const result = JSON.parse(response.text);
-
-      // 3. Save to Firestore
-      const taskToAdd = {
-        userId: currentUser.uid,
-        type: result.type === 'fact-check' ? 'fact-check' : 'meta-cognition',
-        question: result.syncTask,
-        steps: {
-          observation: result.observation,
-          logicGap: result.logicGap,
-          distortion: result.distortion,
-          syncTask: result.syncTask
-        },
-        status: 'pending',
-        createdAt: serverTimestamp()
-      };
-
-      await addDoc(collection(db, 'identity_tasks'), taskToAdd);
+      // 3. Generate new task via AI Service
+      await qaService.generateNewTask(currentUser.uid, newState);
       
       // Update last run time
       localStorage.setItem(`last_mirror_run_${currentUser.uid}`, Date.now().toString());
 
-      toast.success('新しい問いが生成されました');
+      toast.success('デジタルツインが更新され、新しい問いが生成されました');
     } catch (error) {
       console.error("Error generating tasks:", error);
       toast.error('問いの生成に失敗しました');
@@ -225,42 +146,31 @@ export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) 
   };
 
   const handleAnswer = async (taskId: string) => {
-    if (!answerInput.trim()) return;
+    if (!answerInput.trim() || !currentUser) return;
     
     setSyncingTaskId(taskId);
+    const task = tasks.find(t => t.id === taskId);
     
     try {
       // Artificial delay for "Syncing" effect
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const { doc, updateDoc } = await import('firebase/firestore');
-      await updateDoc(doc(db, 'identity_tasks', taskId), {
-        status: 'completed',
-        answer: answerInput,
-        updatedAt: serverTimestamp()
-      });
-
-      await addDoc(collection(db, 'scraps'), {
-        title: `Q&A Reflection: ${answerInput.substring(0, 50)}...`,
-        content: `Q: ${tasks.find(t => t.id === taskId)?.question}\nA: ${answerInput}`,
-        authorId: currentUser?.uid,
-        authorName: currentUser?.displayName || 'User',
-        authorPhoto: currentUser?.photoURL,
-        status: 'open',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        commentCount: 0,
-        icon_emoji: '❓'
-      });
+      await qaService.answerTask(
+        taskId,
+        answerInput,
+        task?.scrapId,
+        currentUser.uid,
+        currentUser.displayName || 'User',
+        currentUser.photoURL || undefined
+      );
 
       setAnsweringTaskId(null);
       setSyncingTaskId(null);
       setAnswerInput('');
-      toast.success('自己対話が記録されました');
+      toast.success('回答がスレッドに記録されました');
     } catch (error) {
-      console.error("Error saving answer:", error);
+      console.error("Error answering task:", error);
       setSyncingTaskId(null);
-      toast.error('保存に失敗しました');
     }
   };
 
@@ -271,9 +181,20 @@ export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) 
       console.log("Task deleted successfully");
       toast.success('問いを削除しました');
     } catch (error) {
-      console.error("Error deleting task:", error);
-      toast.error('削除に失敗しました');
+      handleFirestoreError(error, OperationType.DELETE, `identity_tasks/${taskId}`);
     }
+  };
+
+  const handleExport = () => {
+    if (!identityState) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(identityState, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `jowhari_identity_twin_${currentUser?.uid}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    toast.success('デジタルツインをエクスポートしました');
   };
 
   if (isLoading) return null;
@@ -287,249 +208,432 @@ export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) 
     <div className="space-y-6">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
-            <HelpCircle className="w-5 h-5 text-indigo-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">Q&A</h2>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Audit Agent</p>
-          </div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowTwin(false)}
+            className={cn(
+              "flex items-center gap-2.5 transition-all",
+              !showTwin ? "opacity-100" : "opacity-40 hover:opacity-100"
+            )}
+          >
+            <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
+              <HelpCircle className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-lg font-black text-gray-900 tracking-tight">Q&A</h2>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Audit Agent</p>
+            </div>
+          </button>
+
+          <div className="w-px h-8 bg-gray-100 hidden sm:block" />
+
+          <button 
+            onClick={() => setShowTwin(true)}
+            className={cn(
+              "flex items-center gap-2.5 transition-all",
+              showTwin ? "opacity-100" : "opacity-40 hover:opacity-100"
+            )}
+          >
+            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <Fingerprint className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-lg font-black text-gray-900 tracking-tight">Digital Twin</h2>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Living State</p>
+            </div>
+          </button>
         </div>
 
         {/* Sync Rate Meter */}
-        <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="text-right">
-            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-0.5">Sync Rate</p>
-            <p className={cn(
-              "text-lg font-black tabular-nums leading-none",
-              syncRate > 80 ? "text-emerald-600" : syncRate > 40 ? "text-indigo-600" : "text-amber-600"
-            )}>
-              {syncRate}<span className="text-xs ml-0.5">%</span>
-            </p>
-          </div>
-          <div className="w-8 h-8 relative">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="16"
-                cy="16"
-                r="13"
-                stroke="currentColor"
-                strokeWidth="3"
-                fill="transparent"
-                className="text-gray-100"
-              />
-              <circle
-                cx="16"
-                cy="16"
-                r="13"
-                stroke="currentColor"
-                strokeWidth="3"
-                fill="transparent"
-                strokeDasharray={81.68}
-                strokeDashoffset={81.68 - (81.68 * syncRate) / 100}
-                strokeLinecap="round"
-                className={cn(
-                  "transition-all duration-1000 ease-out",
-                  syncRate > 80 ? "text-emerald-500" : syncRate > 40 ? "text-indigo-500" : "text-amber-500"
-                )}
-              />
-            </svg>
-          </div>
-          {isOwner && (
-            <button
-              onClick={generateTasks}
-              disabled={isGenerating}
-              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all disabled:opacity-50"
-              title="再観測する"
-            >
-              <RefreshCw className={cn("w-4 h-4", isGenerating && "animate-spin")} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {pendingTasks.length === 0 ? (
-          isOwner && (
-            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200 mx-2">
-              <HelpCircle className="w-6 h-6 text-indigo-200 mx-auto mb-2" />
-              <p className="text-xs text-gray-500 font-medium">
-                まだ問いはありません。
+        {!showTwin ? (
+          <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="text-right">
+              <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-0.5">Sync Rate</p>
+              <p className={cn(
+                "text-lg font-black tabular-nums leading-none",
+                syncRate > 80 ? "text-emerald-600" : syncRate > 40 ? "text-indigo-600" : "text-amber-600"
+              )}>
+                {syncRate}<span className="text-xs ml-0.5">%</span>
               </p>
+            </div>
+            <div className="w-8 h-8 relative">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="16"
+                  cy="16"
+                  r="13"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="transparent"
+                  className="text-gray-100"
+                />
+                <circle
+                  cx="16"
+                  cy="16"
+                  r="13"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="transparent"
+                  strokeDasharray={81.68}
+                  strokeDashoffset={81.68 - (81.68 * syncRate) / 100}
+                  strokeLinecap="round"
+                  className={cn(
+                    "transition-all duration-1000 ease-out",
+                    syncRate > 80 ? "text-emerald-500" : syncRate > 40 ? "text-indigo-500" : "text-amber-500"
+                  )}
+                />
+              </svg>
+            </div>
+            {isOwner && (
               <button
                 onClick={generateTasks}
-                className="mt-3 px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                disabled={isGenerating}
+                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all disabled:opacity-50"
+                title="再観測する"
               >
-                問いを生成
+                <RefreshCw className={cn("w-4 h-4", isGenerating && "animate-spin")} />
               </button>
-            </div>
-          )
+            )}
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {pendingTasks.map((task) => (
-              <motion.div
-                key={task.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="group relative bg-white p-5 rounded-2xl transition-all border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100"
+          <div className="flex items-center gap-2">
+            {isOwner && identityState && (
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
               >
-                <div className="flex flex-col md:flex-row items-start gap-5">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm",
-                    task.type === 'fact-check' ? "bg-amber-50 text-amber-600" : "bg-indigo-50 text-indigo-600"
-                  )}>
-                    {task.type === 'fact-check' ? <AlertCircle className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
-                          task.type === 'fact-check' ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
-                        )}>
-                          {task.type === 'fact-check' ? 'Fact-Check' : 'Meta'}
-                        </span>
-                      </div>
-                      {isOwner && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(task.id);
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          title="削除する"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {task.steps && (
-                      <div className={cn(
-                        "space-y-4 border-l pl-4 py-0.5",
-                        task.type === 'fact-check' ? "border-amber-100" : "border-indigo-100"
-                      )}>
-                        <div className="space-y-1">
-                          <p className={cn(
-                            "text-[9px] font-black uppercase tracking-widest",
-                            task.type === 'fact-check' ? "text-amber-400" : "text-indigo-400"
-                          )}>
-                            {task.type === 'fact-check' ? 'Observed Persona' : 'Mental Bug'}
-                          </p>
-                          <p className="text-xs font-mono text-gray-600 whitespace-pre-wrap leading-relaxed">{task.steps.observation}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className={cn(
-                            "text-[9px] font-black uppercase tracking-widest",
-                            task.type === 'fact-check' ? "text-amber-400" : "text-indigo-400"
-                          )}>
-                            {task.type === 'fact-check' ? 'Audit Report' : 'Inquiry'}
-                          </p>
-                          <p className="text-sm font-bold text-gray-800 leading-tight">{task.steps.logicGap}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className={cn(
-                            "text-[9px] font-black uppercase tracking-widest",
-                            task.type === 'fact-check' ? "text-amber-400" : "text-indigo-400"
-                          )}>Distortion</p>
-                          <p className="text-xs text-gray-700 italic leading-relaxed">{task.steps.distortion}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest">Question</p>
-                      <p className="text-base font-bold text-gray-900 leading-tight whitespace-pre-wrap font-mono">
-                        {task.question}
-                      </p>
-                    </div>
-                    
-                    {answeringTaskId === task.id ? (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-4 pt-4 border-t border-gray-50"
-                      >
-                        {syncingTaskId === task.id ? (
-                          <div className="py-8 flex flex-col items-center justify-center gap-4">
-                            <div className="relative w-16 h-16">
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                className="absolute inset-0 border-2 border-indigo-500 border-t-transparent rounded-full"
-                              />
-                              <motion.div
-                                animate={{ rotate: -360 }}
-                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                className="absolute inset-2 border-2 border-indigo-200 border-b-transparent rounded-full"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <RefreshCw className="w-5 h-5 text-indigo-600 animate-pulse" />
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 animate-pulse">Syncing Answer...</p>
-                              <p className="text-[8px] text-gray-400 font-bold mt-1">答えを鏡の中に刻んでいます</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="relative">
-                              <textarea
-                                value={answerInput}
-                                onChange={(e) => setAnswerInput(e.target.value)}
-                                placeholder="あなたの『事実』を言葉にしてください..."
-                                className="w-full p-5 bg-slate-50/50 border border-indigo-100 rounded-2xl text-xs font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all min-h-[120px] resize-none font-mono leading-relaxed"
-                              />
-                              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-100 shadow-sm">
-                                <span className={cn(
-                                  "text-[9px] font-black tabular-nums",
-                                  answerInput.length > 0 ? "text-indigo-600" : "text-gray-300"
-                                )}>
-                                  {answerInput.length}
-                                </span>
-                                <div className="w-px h-2 bg-gray-200" />
-                                <Edit2 className="w-2.5 h-2.5 text-gray-400" />
-                              </div>
-                            </div>
-                            <div className="flex justify-end items-center gap-4">
-                              <button
-                                onClick={() => setAnsweringTaskId(null)}
-                                className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => handleAnswer(task.id)}
-                                disabled={!answerInput.trim()}
-                                className="px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.15em] rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-50 disabled:grayscale"
-                              >
-                                同期を開始する
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </motion.div>
-                    ) : (
-                      isOwner && (
-                        <button
-                          onClick={() => setAnsweringTaskId(task.id)}
-                          className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 text-[10px] font-black uppercase tracking-widest group/btn pt-1"
-                        >
-                          答えを出す
-                          <Sparkles className="w-3 h-3 group-hover:scale-125 transition-transform" />
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                <Zap className="w-3.5 h-3.5" />
+                Export Twin
+              </button>
+            )}
+            {isOwner && (
+              <button
+                onClick={generateTasks}
+                disabled={isGenerating}
+                className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 disabled:opacity-50"
+                title="状態を更新する"
+              >
+                <RefreshCw className={cn("w-4 h-4", isGenerating && "animate-spin")} />
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      <AnimatePresence mode="wait">
+        {!showTwin ? (
+          <motion.div
+            key="audit"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-3"
+          >
+            {pendingTasks.length === 0 ? (
+              isOwner && (
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200 mx-2">
+                  <HelpCircle className="w-6 h-6 text-indigo-200 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500 font-medium">
+                    まだ問いはありません。
+                  </p>
+                  <button
+                    onClick={generateTasks}
+                    className="mt-3 px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                  >
+                    問いを生成
+                  </button>
+                </div>
+              )
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {pendingTasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group relative bg-white p-5 rounded-2xl transition-all border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100"
+                  >
+                    <div className="flex flex-col md:flex-row items-start gap-5">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm bg-indigo-50 text-indigo-600"
+                      )}>
+                        <Fingerprint className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700"
+                            )}>
+                              Digital Twin Edit
+                            </span>
+                            {task.scrapId && onSelectScrap && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectScrap(task.scrapId!);
+                                }}
+                                className="flex items-center gap-1 text-[9px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                スレッドを表示
+                              </button>
+                            )}
+                          </div>
+                          {isOwner && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(task.id);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                              title="削除する"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {task.steps && (
+                          <div className={cn(
+                            "space-y-4 border-l pl-4 py-0.5 border-indigo-100"
+                          )}>
+                            <div className="space-y-1">
+                              <p className={cn(
+                                "text-[9px] font-black uppercase tracking-widest text-indigo-400"
+                              )}>
+                                Observation
+                              </p>
+                              <p className="text-xs font-mono text-gray-600 whitespace-pre-wrap leading-relaxed">{task.steps.observation}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className={cn(
+                                "text-[9px] font-black uppercase tracking-widest text-indigo-400"
+                              )}>
+                                Missing Link (Gap)
+                              </p>
+                              <p className="text-sm font-bold text-gray-800 leading-tight">{task.steps.gap}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest">Question</p>
+                          <p className="text-base font-bold text-gray-900 leading-tight whitespace-pre-wrap font-mono">
+                            {task.question}
+                          </p>
+                        </div>
+                        
+                        {answeringTaskId === task.id ? (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="space-y-4 pt-4 border-t border-gray-50"
+                          >
+                            {syncingTaskId === task.id ? (
+                              <div className="py-8 flex flex-col items-center justify-center gap-4">
+                                <div className="relative w-16 h-16">
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                    className="absolute inset-0 border-2 border-indigo-500 border-t-transparent rounded-full"
+                                  />
+                                  <motion.div
+                                    animate={{ rotate: -360 }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                    className="absolute inset-2 border-2 border-indigo-200 border-b-transparent rounded-full"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <RefreshCw className="w-5 h-5 text-indigo-600 animate-pulse" />
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 animate-pulse">Syncing Answer...</p>
+                                  <p className="text-[8px] text-gray-400 font-bold mt-1">答えを鏡の中に刻んでいます</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="relative">
+                                  <textarea
+                                    value={answerInput}
+                                    onChange={(e) => setAnswerInput(e.target.value)}
+                                    onKeyDown={handleAnswerKeyDown}
+                                    placeholder="あなたの『事実』を言葉にしてください..."
+                                    className="w-full p-5 bg-slate-50/50 border border-indigo-100 rounded-2xl text-xs font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all min-h-[120px] resize-none font-mono leading-relaxed"
+                                    maxLength={50000}
+                                  />
+                                  <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-100 shadow-sm">
+                                    <span className={cn(
+                                      "text-[9px] font-black tabular-nums",
+                                      answerInput.length > 0 ? "text-indigo-600" : "text-gray-300"
+                                    )}>
+                                      {answerInput.length}
+                                    </span>
+                                    <div className="w-px h-2 bg-gray-200" />
+                                    <Edit2 className="w-2.5 h-2.5 text-gray-400" />
+                                  </div>
+                                </div>
+                                <div className="flex justify-end items-center gap-4">
+                                  <button
+                                    onClick={() => setAnsweringTaskId(null)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleAnswer(task.id)}
+                                    disabled={!answerInput.trim()}
+                                    className="px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.15em] rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-50 disabled:grayscale"
+                                  >
+                                    同期を開始する
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </motion.div>
+                        ) : (
+                          isOwner && (
+                            <button
+                              onClick={() => setAnsweringTaskId(task.id)}
+                              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 text-[10px] font-black uppercase tracking-widest group/btn pt-1"
+                            >
+                              答えを出す
+                              <Sparkles className="w-3 h-3 group-hover:scale-125 transition-transform" />
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="twin"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            {!identityState ? (
+              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+                <Fingerprint className="w-10 h-10 text-gray-200 mx-auto mb-4" />
+                <p className="text-sm text-gray-400 font-bold">デジタルツインはまだ生成されていません</p>
+                <button
+                  onClick={generateTasks}
+                  className="mt-6 px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                >
+                  生成を開始
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Core Logic */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
+                      <Zap className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-900">Core Logic</h3>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 leading-relaxed font-mono">
+                    {identityState.coreLogic}
+                  </p>
+                </div>
+
+                {/* Unresolved Conflict */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
+                      <AlertCircle className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-900">Unresolved Conflict</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-sm font-black text-gray-900 leading-tight">
+                      {identityState.unresolvedConflict.title}
+                    </p>
+                    <p className="text-xs font-medium text-gray-600 leading-relaxed font-mono bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      {identityState.unresolvedConflict.deepAnalysis}
+                    </p>
+                    <div className="flex items-start gap-2 pt-1">
+                      <div className="w-1 h-4 bg-indigo-500 rounded-full mt-0.5" />
+                      <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                        Grounding Fact: {identityState.unresolvedConflict.groundingFact}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Public Narrative */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-900">Public Narrative</h3>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 leading-relaxed font-mono">
+                    {identityState.publicNarrative}
+                  </p>
+                </div>
+
+                {/* Shadow Narrative */}
+                <div className="bg-slate-900 p-6 rounded-3xl shadow-xl space-y-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl" />
+                  <div className="flex items-center gap-2 relative z-10">
+                    <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+                      <Fingerprint className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white">Shadow Narrative</h3>
+                  </div>
+                  <p className="text-sm font-medium text-indigo-100/90 leading-relaxed font-mono relative z-10">
+                    {identityState.shadowNarrative}
+                  </p>
+                </div>
+
+                {/* Evolution Log */}
+                <div className="md:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+                        <History className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-gray-900">Evolution Log</h3>
+                    </div>
+                    <p className="text-[10px] text-gray-400 font-bold">Latest Update: {identityState.updatedAt ? new Date((identityState.updatedAt as any).seconds * 1000).toLocaleString() : ''}</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {identityState.evolutionLog.slice().reverse().map((log, i) => (
+                      <div key={i} className="flex gap-4 group">
+                        <div className="flex flex-col items-center">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5" />
+                          {i !== identityState.evolutionLog.length - 1 && (
+                            <div className="w-px flex-1 bg-gray-100 my-1" />
+                          )}
+                        </div>
+                        <div className="flex-1 pb-4">
+                          <p className="text-[10px] text-gray-400 font-bold mb-1">
+                            {log.timestamp ? new Date((log.timestamp as any).seconds * 1000).toLocaleString() : ''}
+                          </p>
+                          <p className="text-xs text-gray-600 font-medium leading-relaxed group-hover:text-gray-900 transition-colors">
+                            {log.changeDescription}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {tasks.some(t => t.status === 'completed') && (
         <div className="px-2 pt-10 border-t border-gray-100">
@@ -556,7 +660,7 @@ export function QASection({ userId: propUserId, onSelectTask }: QASectionProps) 
                       <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                     </div>
                     <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">
-                      {task.type === 'fact-check' ? 'Fact-Check' : 'Meta Reflection'}
+                      {task.type === 'digital-twin-edit' ? 'Digital Twin Edit' : 'Reflection'}
                     </span>
                   </div>
                   {isOwner && (

@@ -16,6 +16,8 @@ import 'katex/dist/katex.min.css';
 import { LinkPreview } from './LinkPreview';
 import { toast } from 'sonner';
 
+import { logActivity, ActivityType } from '../lib/analytics';
+
 interface CommentFormProps {
   scrapId: string;
   parentId?: string;
@@ -138,6 +140,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
 
       setContent('');
       setImages({});
+      logActivity(ActivityType.ACTION, undefined, 'post_comment', { scrapId, parentId: parentId || null });
       toast.success('コメントを投稿しました');
       onSuccess?.();
     } catch (error) {
@@ -157,8 +160,50 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
     return preview;
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey)) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit(e as any);
+      } else if (e.key === 'b') {
+        e.preventDefault();
+        insertMarkdown('**', '**');
+      } else if (e.key === 'i') {
+        e.preventDefault();
+        insertMarkdown('*', '*');
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        insertMarkdown('[', '](url)');
+      }
+    }
+  };
+
+  const insertMarkdown = (prefix: string, suffix: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    const newText = content.substring(0, start) + prefix + selectedText + suffix + content.substring(end);
+    
+    setContent(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      if (start === end) {
+        // No selection, place cursor between prefix and suffix
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      } else {
+        // Had selection, place cursor after suffix
+        textarea.setSelectionRange(start + prefix.length + selectedText.length + suffix.length, start + prefix.length + selectedText.length + suffix.length);
+      }
+    }, 0);
+  };
+
   return (
-    <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm">
+    <div className="bg-white p-3 sm:p-8 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm w-full">
       <div className="flex mb-4">
         <div className="flex bg-gray-100 p-1 rounded-xl">
           <button
@@ -169,7 +214,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
             }`}
           >
             <Edit3 className="w-3.5 h-3.5" />
-            編集
+            <span className="hidden sm:inline">編集</span>
           </button>
           <button
             type="button"
@@ -179,7 +224,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
-            プレビュー
+            <span className="hidden sm:inline">プレビュー</span>
           </button>
         </div>
       </div>
@@ -254,18 +299,13 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSubmit(e as any);
-                  }
-                }}
+                onKeyDown={handleKeyDown}
                 placeholder={parentId ? "返信を入力..." : "コメントを入力... (Markdown対応)"}
                 minRows={parentId ? 4 : 8}
                 maxRows={20}
                 autoFocus={autoFocus}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                maxLength={10000}
+                maxLength={50000}
               />
             </motion.div>
           )}
@@ -287,17 +327,17 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
               className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-bold text-sm disabled:opacity-50"
             >
               {isCompressing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
-              {isCompressing ? '圧縮中...' : '写真を添付'}
+              <span className="hidden sm:inline">{isCompressing ? '圧縮中...' : '写真を添付'}</span>
             </button>
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting || !content.trim()}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            コメントを投稿
+            <span className="hidden sm:inline">コメントを投稿</span>
           </button>
         </div>
       </form>

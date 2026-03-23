@@ -184,7 +184,7 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
       </div>
 
       {/* Q&A Section */}
-      <QASection userId={userId} />
+      {/* <QASection userId={userId} /> */}
 
       {/* Scraps Section */}
       <div className="space-y-6">

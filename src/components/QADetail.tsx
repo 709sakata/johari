@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { db, auth } from '../firebase';
 import { doc, getDoc, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -35,6 +36,8 @@ interface QATask {
   updatedAt?: any;
   userId: string;
 }
+
+import { logActivity, ActivityType } from '../lib/analytics';
 
 interface QADetailProps {
   taskId: string;
@@ -107,6 +110,7 @@ export function QADetail({ taskId, onBack }: QADetailProps) {
         createdAt: serverTimestamp()
       });
       setNewComment('');
+      logActivity(ActivityType.ACTION, undefined, 'post_qa_comment', { taskId });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, path);
     } finally {
@@ -127,6 +131,43 @@ export function QADetail({ taskId, onBack }: QADetailProps) {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey)) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmitComment(e as any);
+      } else if (e.key === 'b') {
+        e.preventDefault();
+        insertMarkdown('**', '**', e.currentTarget);
+      } else if (e.key === 'i') {
+        e.preventDefault();
+        insertMarkdown('*', '*', e.currentTarget);
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        insertMarkdown('[', '](url)', e.currentTarget);
+      }
+    }
+  };
+
+  const insertMarkdown = (prefix: string, suffix: string, textarea: HTMLTextAreaElement) => {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = newComment.substring(start, end);
+    const newText = newComment.substring(0, start) + prefix + selectedText + suffix + newComment.substring(end);
+    
+    setNewComment(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      if (start === end) {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length + selectedText.length + suffix.length, start + prefix.length + selectedText.length + suffix.length);
+      }
+    }, 0);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -140,6 +181,9 @@ export function QADetail({ taskId, onBack }: QADetailProps) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-24">
+      <Helmet>
+        <title>Q&A詳細 | じょはり</title>
+      </Helmet>
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
@@ -285,9 +329,11 @@ export function QADetail({ taskId, onBack }: QADetailProps) {
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="さらに思考を深める..."
               className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-1 min-h-[44px] max-h-32 resize-none"
               rows={1}
+              maxLength={50000}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';

@@ -48,13 +48,12 @@ service cloud.firestore {
     // Document ID: auto-generated
     // Fields:
     //   - userId: string (required, matches auth.uid)
-    //   - type: string (required, ['fact-check', 'meta-cognition', 'audit'])
+    //   - type: string (required, ['digital-twin-edit'])
     //   - question: string (required)
-    //   - steps: map (optional, for 'audit' type)
+    //   - steps: map (optional)
     //     - observation: string
-    //     - logicGap: string
-    //     - distortion: string
-    //     - syncTask: string
+    //     - gap: string
+    //     - question: string
     //   - status: string (required, ['pending', 'completed'])
     //   - answer: string (optional)
     //   - createdAt: timestamp (required)
@@ -81,8 +80,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function hasOnlyAllowedFields(data, allowedFields) {
+      return data.keys().hasOnly(allowedFields);
+    }
+
     function isValidScrap(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+      return hasOnlyAllowedFields(data, ['title', 'content', 'authorId', 'authorName', 'authorPhoto', 'status', 'createdAt', 'updatedAt', 'commentCount', 'icon_emoji']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 5000 &&
+             (!('content' in data) || (data.content is string && data.content.size() <= 200000)) &&
              data.status in ['open', 'closed'] &&
              data.authorId is string &&
              data.authorName is string &&
@@ -94,51 +99,87 @@ service cloud.firestore {
     }
 
     function isValidComment(data) {
-      return data.content is string && data.content.size() >= 0 && data.content.size() <= 10000 &&
+      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt', 'updatedAt', 'parentId', 'images']) &&
+             data.content is string && data.content.size() >= 0 && data.content.size() <= 200000 &&
              data.authorId is string &&
              data.authorName is string &&
              data.createdAt is timestamp &&
              (!('parentId' in data) || data.parentId is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null)) &&
              (!('images' in data) || (data.images is map && data.images.size() <= 10));
     }
 
     function isValidFeed(data) {
-      return data.url is string && data.url.size() > 0 &&
-             data.title is string && data.title.size() > 0 &&
+      return hasOnlyAllowedFields(data, ['url', 'title', 'authorId', 'createdAt']) &&
+             data.url is string && data.url.size() > 0 && data.url.size() <= 1000 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
              data.authorId is string &&
              data.createdAt is timestamp;
     }
 
     function isValidUser(data) {
-      return data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+      return hasOnlyAllowedFields(data, ['displayName', 'photoURL', 'bio', 'links', 'updatedAt', 'role']) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
-             (!('links' in data) || (data.links is list && data.links.size() <= 1000)) &&
+             (!('links' in data) || (data.links is list && data.links.size() <= 100)) &&
+             (!('role' in data) || (data.role in ['admin', 'user'])) &&
              data.updatedAt is timestamp;
     }
 
     function isValidIdentityTask(data) {
-      return data.userId is string &&
-             data.type in ['fact-check', 'meta-cognition', 'audit'] &&
-             data.question is string && data.question.size() > 0 &&
-             data.status in ['pending', 'completed'] &&
+      return hasOnlyAllowedFields(data, ['userId', 'type', 'question', 'steps', 'status', 'createdAt', 'updatedAt', 'completedAt', 'answer', 'scrapId']) &&
+             data.userId is string &&
+             data.type in ['digital-twin-edit'] &&
+             data.question is string && data.question.size() > 0 && data.question.size() <= 10000 &&
+             data.status in ['pending', 'completed', 'cancelled'] &&
              data.createdAt is timestamp &&
-             (!('answer' in data) || (data.answer is string && data.answer.size() <= 2000)) &&
-             (!('steps' in data) || (
-               data.steps is map &&
-               data.steps.observation is string &&
-               data.steps.logicGap is string &&
-               data.steps.distortion is string &&
-               data.steps.syncTask is string
-             ));
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('completedAt' in data) || data.completedAt is timestamp) &&
+             (!('answer' in data) || (data.answer is string && data.answer.size() <= 200000)) &&
+             (!('scrapId' in data) || data.scrapId is string) &&
+             data.steps is map &&
+             data.steps.keys().hasAll(['observation', 'gap', 'question']) &&
+             data.steps.observation is string && data.steps.observation.size() <= 200000 &&
+             data.steps.gap is string && data.steps.gap.size() <= 200000 &&
+             data.steps.question is string && data.steps.question.size() <= 200000;
     }
 
     function isValidQAComment(data) {
-      return data.content is string && data.content.size() > 0 && data.content.size() <= 10000 &&
+      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt']) &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 200000 &&
              data.authorId is string &&
              data.authorName is string &&
              data.createdAt is timestamp &&
              (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null));
+    }
+
+    function isValidIdentityState(data) {
+      return hasOnlyAllowedFields(data, ['userId', 'coreLogic', 'publicNarrative', 'shadowNarrative', 'unresolvedConflict', 'evolutionLog', 'lastScrapId', 'updatedAt']) &&
+             data.userId is string &&
+             data.coreLogic is string && data.coreLogic.size() <= 200000 &&
+             data.publicNarrative is string && data.publicNarrative.size() <= 200000 &&
+             data.shadowNarrative is string && data.shadowNarrative.size() <= 200000 &&
+             data.unresolvedConflict is map &&
+             data.unresolvedConflict.keys().hasAll(['title', 'deepAnalysis', 'groundingFact']) &&
+             data.unresolvedConflict.title is string && data.unresolvedConflict.title.size() <= 5000 &&
+             data.unresolvedConflict.deepAnalysis is string && data.unresolvedConflict.deepAnalysis.size() <= 100000 &&
+             data.unresolvedConflict.groundingFact is string && data.unresolvedConflict.groundingFact.size() <= 20000 &&
+             data.updatedAt is timestamp &&
+             (!('evolutionLog' in data) || data.evolutionLog is list) &&
+             (!('lastScrapId' in data) || data.lastScrapId is string);
+    }
+
+    function isValidActivityLog(data) {
+      return hasOnlyAllowedFields(data, ['userId', 'type', 'path', 'action', 'metadata', 'userAgent', 'timestamp']) &&
+             data.type in ['page_view', 'action'] &&
+             data.timestamp is timestamp &&
+             (!('userId' in data) || data.userId is string) &&
+             (!('path' in data) || data.path is string) &&
+             (!('action' in data) || data.action is string) &&
+             (!('metadata' in data) || data.metadata is map) &&
+             (!('userAgent' in data) || data.userAgent is string);
     }
 
     function isAdmin() {
@@ -222,6 +263,24 @@ service cloud.firestore {
                         request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
       }
+    }
+
+    match /identity_states/{stateId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && 
+                      isValidIdentityState(request.resource.data) && 
+                      request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                      isValidIdentityState(request.resource.data) && 
+                      (resource.data.userId == request.auth.uid || isAdmin()) &&
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isValidActivityLog(request.resource.data) &&
+                      (!('userId' in request.resource.data) || (isAuthenticated() && request.resource.data.userId == request.auth.uid));
     }
 
     match /test/connection {

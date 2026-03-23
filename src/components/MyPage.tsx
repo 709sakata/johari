@@ -98,6 +98,40 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
 
   const embedCode = authUser ? `<iframe src="${window.location.origin}/users/${authUser.uid}?embed=true" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eee;"></iframe>` : '';
 
+  const handleBioKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey)) {
+      if (e.key === 'b') {
+        e.preventDefault();
+        insertMarkdownIntoBio('**', '**', e.currentTarget);
+      } else if (e.key === 'i') {
+        e.preventDefault();
+        insertMarkdownIntoBio('*', '*', e.currentTarget);
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        insertMarkdownIntoBio('[', '](url)', e.currentTarget);
+      }
+    }
+  };
+
+  const insertMarkdownIntoBio = (prefix: string, suffix: string, textarea: HTMLTextAreaElement) => {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = editBio.substring(start, end);
+    const newText = editBio.substring(0, start) + prefix + selectedText + suffix + editBio.substring(end);
+    
+    setEditBio(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      if (start === end) {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length + selectedText.length + suffix.length, start + prefix.length + selectedText.length + suffix.length);
+      }
+    }, 0);
+  };
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(embedCode);
     setCopied(true);
@@ -238,6 +272,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
                       <textarea
                         value={editBio}
                         onChange={(e) => setEditBio(e.target.value)}
+                        onKeyDown={handleBioKeyDown}
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all min-h-[120px] resize-none"
                         placeholder="自分について教えてください"
                       />
@@ -358,7 +393,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
       </section>
       
       {/* Q&A Section */}
-      <QASection userId={authUser.uid} />
+      {/* <QASection userId={authUser.uid} /> */}
 
       {/* Scraps Section */}
       <div className="space-y-6">
