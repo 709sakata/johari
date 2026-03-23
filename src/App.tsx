@@ -68,12 +68,13 @@ export default function App() {
   useEffect(() => {
     const handlePopState = async () => {
       const path = window.location.pathname;
-      const params = new URLSearchParams(window.location.search);
       
-      if (path === '/') {
-        setSelectedScrap(null);
-        setSelectedQATaskId(null);
-        setSelectedUserId(null);
+      // Reset all detail states first
+      setSelectedScrap(null);
+      setSelectedQATaskId(null);
+      setSelectedUserId(null);
+
+      if (path === '/' || path === '') {
         setActiveTab('scraps');
         return;
       }
@@ -96,24 +97,19 @@ export default function App() {
         if (userId) {
           setSelectedUserId(userId);
           setActiveTab('user');
-          setSelectedScrap(null);
         }
       } else if (path.startsWith('/qa/')) {
         const qaId = path.split('/qa/')[1];
         if (qaId) {
           setSelectedQATaskId(qaId);
           setActiveTab('qa');
-          setSelectedScrap(null);
         }
       } else if (path === '/mypage') {
         setActiveTab('mypage');
-        setSelectedScrap(null);
       } else if (path === '/new-scrap') {
         setActiveTab('new-scrap');
-        setSelectedScrap(null);
       } else if (path === '/analytics') {
         setActiveTab('analytics');
-        setSelectedScrap(null);
       }
     };
 
@@ -171,6 +167,10 @@ export default function App() {
 
       if (path === '/analytics') {
         setActiveTab('analytics');
+      } else if (path === '/mypage') {
+        setActiveTab('mypage');
+      } else if (path === '/new-scrap') {
+        setActiveTab('new-scrap');
       }
     });
     return () => unsubscribe();
@@ -283,7 +283,7 @@ export default function App() {
                     setSelectedScrap(null);
                     setSelectedQATaskId(null);
                     setSelectedUserId(null);
-                    window.history.pushState({}, '', '/');
+                    window.history.pushState({}, '', '/mypage');
                   }} />
                   {user && (
                     <button
@@ -291,6 +291,7 @@ export default function App() {
                         setActiveTab('new-scrap');
                         setSelectedScrap(null);
                         setSelectedUserId(null);
+                        window.history.pushState({}, '', '/new-scrap');
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
                     >
@@ -454,11 +455,19 @@ export default function App() {
                   >
                     <ScrapThread 
                       scrap={selectedScrap} 
-                      onBack={() => setSelectedScrap(null)} 
+                      onBack={() => {
+                        setSelectedScrap(null);
+                        window.history.pushState({}, '', '/mypage');
+                      }} 
                       onSelectScrap={(scrap) => {
                         setSelectedScrap(scrap);
                         setActiveTab('scraps');
                         window.history.pushState({}, '', `/scraps/${scrap.id}`);
+                      }}
+                      onSelectUser={(userId) => {
+                        setSelectedUserId(userId);
+                        setActiveTab('user');
+                        window.history.pushState({}, '', `/users/${userId}`);
                       }}
                     />
                   </motion.div>
@@ -471,7 +480,10 @@ export default function App() {
                     transition={{ duration: 0.2 }}
                   >
                     <MyPage 
-                      onSelectScrap={setSelectedScrap} 
+                      onSelectScrap={(scrap) => {
+                        setSelectedScrap(scrap);
+                        window.history.pushState({}, '', `/scraps/${scrap.id}`);
+                      }} 
                       onSelectUser={(userId) => {
                         setSelectedUserId(userId);
                         setSelectedScrap(null);
@@ -624,7 +636,7 @@ export default function App() {
                 setSelectedScrap(null);
                 setSelectedQATaskId(null);
                 setSelectedUserId(null);
-                window.history.pushState({}, '', '/');
+                window.history.pushState({}, '', '/mypage');
               }}
               className={`flex flex-col items-center gap-1 transition-all ${
                 activeTab === 'mypage' ? 'text-gray-900' : 'text-gray-400'
