@@ -43,8 +43,7 @@
     "remark-math": "^6.0.0",
     "rss-parser": "^3.13.0",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0",
-    "vite": "^6.2.0"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
