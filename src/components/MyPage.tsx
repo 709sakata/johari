@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { db, collection, query, orderBy, auth, setDoc, doc, getDoc, serverTimestamp } from '../firebase';
+import { db, collection, collectionGroup, query, orderBy, auth, setDoc, doc, getDoc, getDocs, serverTimestamp, writeBatch } from '../firebase';
 import { where } from 'firebase/firestore';
 import { useCollection, useDocumentData } from 'react-firebase-hooks/firestore';
 import { Scrap, User as UserProfile, UserLink } from '../types';
@@ -55,6 +55,8 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
     try {
       // Filter out empty links before saving
       const cleanedLinks = editLinks.filter(l => l.trim() !== '');
+      
+      // 1. Update user profile
       await setDoc(doc(db, 'users', authUser.uid), {
         displayName: editName,
         bio: editBio,
@@ -62,6 +64,50 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         photoURL: authUser.photoURL,
         updatedAt: serverTimestamp(),
       }, { merge: true });
+
+      // 2. Update denormalized authorName in scraps
+      const scrapsQuery = query(collection(db, 'scraps'), where('authorId', '==', authUser.uid));
+      const scrapsSnapshot = await getDocs(scrapsQuery);
+      
+      // 3. Update denormalized authorName in comments (using collectionGroup)
+      const commentsQuery = query(collectionGroup(db, 'comments'), where('authorId', '==', authUser.uid));
+      const commentsSnapshot = await getDocs(commentsQuery);
+      
+      // 4. Update denormalized authorName in qa_comments (using collectionGroup)
+      const qaCommentsQuery = query(collectionGroup(db, 'qa_comments'), where('authorId', '==', authUser.uid));
+      const qaCommentsSnapshot = await getDocs(qaCommentsQuery);
+      
+      const batch = writeBatch(db);
+      let batchCount = 0;
+
+      scrapsSnapshot.docs.forEach((scrapDoc) => {
+        batch.update(scrapDoc.ref, { 
+          authorName: editName,
+          authorPhoto: authUser.photoURL || ''
+        });
+        batchCount++;
+      });
+
+      commentsSnapshot.docs.forEach((commentDoc) => {
+        batch.update(commentDoc.ref, { 
+          authorName: editName,
+          authorPhoto: authUser.photoURL || ''
+        });
+        batchCount++;
+      });
+
+      qaCommentsSnapshot.docs.forEach((qaCommentDoc) => {
+        batch.update(qaCommentDoc.ref, { 
+          authorName: editName,
+          authorPhoto: authUser.photoURL || ''
+        });
+        batchCount++;
+      });
+
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
       setIsEditingProfile(false);
       toast.success('プロフィールを更新しました');
     } catch (error) {

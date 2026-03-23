@@ -414,13 +414,13 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   return (
     <div className="max-w-6xl mx-auto pb-20">
       <Helmet>
-        <title>{scrap?.title ? `${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'}</title>
+        <title>{scrap?.title ? `${scrap.authorName} | ${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'}</title>
         <meta name="description" content={description} />
-        <meta property="og:title" content={scrap?.title ? `${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
+        <meta property="og:title" content={scrap?.title ? `${scrap.authorName} | ${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={url} />
-        <meta name="twitter:title" content={scrap?.title ? `${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
+        <meta name="twitter:title" content={scrap?.title ? `${scrap.authorName} | ${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
         <script type="application/ld+json">
