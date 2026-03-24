@@ -275,82 +275,89 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         <meta name="robots" content="noindex" />
       </Helmet>
       {/* Profile Section */}
-      <section className="bg-white rounded-3xl border border-gray-100 p-4 sm:p-8 shadow-sm">
-        <div className="flex flex-row md:flex-row items-start gap-4 sm:gap-10">
+      <section className="glass rounded-[2.5rem] border border-white/40 p-6 sm:p-10 shadow-2xl shadow-blue-500/5 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        
+        <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-12 text-center sm:text-left">
           {/* Avatar Area */}
-          <div className="relative group flex-shrink-0">
+          <div className="relative group/avatar flex-shrink-0">
             {authUser.photoURL ? (
               <img 
                 src={authUser.photoURL} 
                 alt={authUser.displayName || ''} 
-                className="w-16 h-16 sm:w-32 sm:h-32 rounded-2xl shadow-sm border-2 border-gray-50 object-cover" 
+                className="w-24 h-24 sm:w-40 sm:h-40 rounded-[2rem] sm:rounded-[3rem] shadow-2xl border-4 border-white object-cover transition-all duration-500 group-hover/avatar:scale-105 group-hover/avatar:rotate-3" 
                 referrerPolicy="no-referrer" 
               />
             ) : (
-              <div className="w-16 h-16 sm:w-32 sm:h-32 rounded-2xl bg-gray-50 flex items-center justify-center border-2 border-gray-50">
-                <User className="w-8 h-8 sm:w-12 sm:h-12 text-gray-300" />
+              <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-[2rem] sm:rounded-[3rem] bg-white/50 backdrop-blur-sm flex items-center justify-center border-4 border-white shadow-xl">
+                <User className="w-12 h-12 sm:w-20 sm:h-20 text-gray-300" />
               </div>
             )}
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-12 sm:h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20 border-2 border-white">
+              <User className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
           </div>
 
           {/* Info Area */}
-          <div className="flex-1 flex flex-col items-start text-left gap-3 sm:gap-6 min-w-0">
+          <div className="flex-1 flex flex-col items-center sm:items-start gap-4 sm:gap-8 min-w-0">
             {!isEditingProfile ? (
-              <div className="space-y-3 sm:space-y-6 w-full">
-                <div className="space-y-1.5 sm:space-y-3">
-                  <div className="flex flex-row items-center gap-2 sm:gap-3">
-                    <h2 className="text-lg sm:text-3xl font-black text-gray-900 tracking-tight truncate">
+              <div className="space-y-4 sm:space-y-8 w-full flex flex-col items-center sm:items-start">
+                <div className="space-y-2 sm:space-y-4 w-full">
+                  <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-5">
+                    <h2 className="font-display text-2xl sm:text-5xl font-bold text-gray-900 tracking-tight truncate max-w-full">
                       {profile?.displayName || authUser.displayName || 'ユーザー'}
                     </h2>
-                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => setIsEditingProfile(true)}
-                        className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all active:scale-95"
+                        className="p-2 sm:p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/40 transition-all active:scale-95 shadow-sm"
                         title="プロフィールを編集"
                       >
-                        <Edit2 className="w-3.5 h-3.5 sm:w-4 h-4" />
+                        <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
                         onClick={copyToClipboard}
-                        className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all active:scale-95"
+                        className="p-2 sm:p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/40 transition-all active:scale-95 shadow-sm"
                         title="埋め込みコードをコピー"
                       >
-                        {copied ? <Check className="w-3.5 h-3.5 sm:w-4 h-4 text-emerald-500" /> : <Code className="w-3.5 h-3.5 sm:w-4 h-4" />}
+                        {copied ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" /> : <Code className="w-4 h-4 sm:w-5 sm:h-5" />}
                       </button>
                     </div>
                   </div>
-                  {profile?.bio && (
-                    <p className="text-gray-500 text-xs sm:text-sm leading-relaxed max-w-xl font-medium line-clamp-2 md:line-clamp-none">
+                  {profile?.bio ? (
+                    <p className="text-gray-600 text-sm sm:text-lg leading-relaxed max-w-2xl font-medium">
                       {profile.bio}
                     </p>
+                  ) : (
+                    <p className="text-xs sm:text-sm text-gray-400 italic font-medium">自己紹介を設定しましょう</p>
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6">
                   {/* Link Tag */}
                   {(profile?.links || []).length > 0 && (
                     <button
                       onClick={() => setIsLinksDialogOpen(true)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full border border-gray-200 transition-all active:scale-95 group"
+                      className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-white/60 hover:bg-white text-gray-600 rounded-full border border-white/40 shadow-sm transition-all active:scale-95 group"
                     >
-                      <LinkIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">ソース</span>
-                      <span className="px-1 py-0.5 bg-gray-900 text-white text-[8px] sm:text-[9px] font-black rounded-full min-w-[1.2rem] text-center">
+                      <LinkIcon className="w-4 h-4 text-blue-500" />
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">ソースリンク</span>
+                      <span className="px-2 py-0.5 bg-gray-900 text-white text-[9px] sm:text-[10px] font-black rounded-full min-w-[1.5rem] text-center">
                         {(profile?.links || []).length}
                       </span>
                     </button>
                   )}
                   
                   {/* Quick Stats */}
-                  <div className="flex items-center gap-3 sm:gap-4 py-1 px-3 sm:px-4 bg-gray-50/50 rounded-full border border-gray-100/50">
-                    <div className="flex items-center gap-1 sm:gap-1.5">
-                      <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Threads</span>
-                      <span className="text-[10px] sm:text-xs font-black text-gray-900">{allScraps.length}</span>
+                  <div className="flex items-center gap-6 sm:gap-8 py-2 px-6 sm:px-8 bg-white/40 backdrop-blur-sm rounded-full border border-white/40 shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">Threads</span>
+                      <span className="text-sm sm:text-lg font-black text-gray-900">{allScraps.length}</span>
                     </div>
-                    <div className="w-px h-3 bg-gray-200" />
-                    <div className="flex items-center gap-1 sm:gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] sm:text-xs font-black text-gray-900">{allScraps.filter(s => s.status === 'open').length}</span>
+                    <div className="w-px h-4 sm:h-6 bg-gray-200/50" />
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
+                      <span className="text-sm sm:text-lg font-black text-gray-900">{allScraps.filter(s => s.status === 'open').length}</span>
                     </div>
                   </div>
                 </div>
@@ -498,10 +505,12 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
       {/* <QASection userId={authUser.uid} /> */}
 
       {/* Scraps Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
-            <LayoutGrid className="w-6 h-6 text-blue-600" />
+          <h2 className="font-display text-2xl font-bold text-gray-900 flex items-center gap-4 tracking-tight">
+            <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+              <LayoutGrid className="w-5 h-5 text-white" />
+            </div>
             マイ・スレッド
           </h2>
         </div>
@@ -509,37 +518,40 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         <div className="space-y-0">
           {/* Tabs & Export */}
           <div className="flex items-center justify-between gap-4 mb-0">
-            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-t-2xl w-fit">
+            <div className="flex items-center gap-1.5 bg-white/40 backdrop-blur-md p-2 rounded-t-[2.5rem] w-fit border-t border-x border-white/40 shadow-sm">
               <button
                 onClick={() => setStatusTab('open')}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all",
+                  "flex items-center gap-2.5 px-6 py-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all",
                   statusTab === 'open' 
-                    ? "bg-white text-emerald-600 shadow-sm" 
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-white text-emerald-600 shadow-xl shadow-emerald-500/10 ring-1 ring-black/5" 
+                    : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
                 )}
               >
-                <Circle className="w-4 h-4" />
-                オープン
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  statusTab === 'open' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-gray-300"
+                )} />
+                Open
               </button>
               <button
                 onClick={() => setStatusTab('closed')}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all",
+                  "flex items-center gap-2.5 px-6 py-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all",
                   statusTab === 'closed' 
-                    ? "bg-white text-gray-600 shadow-sm" 
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-white text-gray-600 shadow-xl shadow-black/10 ring-1 ring-black/5" 
+                    : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
                 )}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                クローズ
+                Closed
               </button>
             </div>
 
             <button
               onClick={handleExportJSON}
               disabled={isExporting}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
               title="データをJSONでエクスポート"
             >
               {isExporting ? (
@@ -552,80 +564,80 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
           </div>
         
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            <div className="flex flex-col items-center justify-center py-24 gap-4 glass rounded-b-[2.5rem] border-t-0">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
               <p className="text-gray-500 font-medium">読み込み中...</p>
             </div>
           ) : error ? (
-            <div className="p-6 bg-red-50 border border-red-100 rounded-xl text-red-600">
+            <div className="p-8 glass border border-red-100 rounded-b-[2.5rem] border-t-0 text-red-600">
               <p className="font-bold">スレッドの取得に失敗しました</p>
               <p className="text-sm opacity-80">{error.message}</p>
             </div>
           ) : filteredScraps.length === 0 ? (
-            <div className="text-center py-20 px-4 bg-white rounded-b-3xl border border-gray-100 border-dashed">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-gray-300" />
+            <div className="text-center py-24 px-4 glass rounded-b-[2.5rem] border-t-0 border-dashed border-gray-200">
+              <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-black/5">
+                <MessageSquare className="w-10 h-10 text-gray-300" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900">
+              <h3 className="font-display text-xl font-bold text-gray-900 mb-2">
                 {statusTab === 'open' ? 'オープンなスレッドはありません' : 'クローズしたスレッドはありません'}
               </h3>
-              <p className="text-gray-500 mt-1">
+              <p className="text-gray-500 max-w-xs mx-auto text-sm leading-relaxed">
                 {statusTab === 'open' ? '新しい思考を記録しましょう。' : '完了した思考がここに表示されます。'}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 bg-white p-4 sm:p-6 rounded-b-3xl border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-b-[2.5rem] rounded-tr-[2.5rem] border border-gray-100 shadow-2xl shadow-black/5">
               <AnimatePresence mode="popLayout">
                 {filteredScraps.map((scrap, index) => (
-                  <motion.div
-                    key={scrap.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => onSelectScrap(scrap)}
-                    className="group relative w-full p-2 bg-slate-50/80 hover:bg-slate-100/80 rounded-[2rem] transition-all cursor-pointer overflow-hidden flex items-center gap-4 sm:gap-5"
-                  >
-                    {/* Left Side: Emoji Block */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 shadow-sm">
-                      <span className="text-2xl sm:text-3xl select-none">
-                        {scrap.icon_emoji || '📄'}
-                      </span>
-                    </div>
+                <motion.div
+                  key={scrap.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => onSelectScrap(scrap)}
+                  className="group relative w-full p-5 bg-white/60 backdrop-blur-md hover:bg-white rounded-[2.5rem] border border-white/40 hover:border-blue-200 transition-all cursor-pointer overflow-hidden flex items-center gap-6 hover:shadow-2xl hover:-translate-y-1 shadow-xl shadow-blue-500/5"
+                >
+                  {/* Left Side: Emoji Block */}
+                  <div className="w-20 h-20 sm:w-28 sm:h-28 bg-white rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:bg-blue-50 shadow-sm border border-gray-50">
+                    <span className="text-3xl sm:text-5xl select-none transform transition-transform duration-500 group-hover:rotate-12">
+                      {scrap.icon_emoji || '📄'}
+                    </span>
+                  </div>
 
-                    {/* Right Side: Content */}
-                    <div className="flex-1 min-w-0 pr-4 sm:pr-6 py-1">
-                      <h3 className={cn(
-                        "font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 line-clamp-2 leading-tight",
-                        scrap.title.length > 40 ? "text-xs sm:text-sm" : "text-sm sm:text-base"
-                      )}>
-                        {scrap.title}
-                      </h3>
-                      
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <div className="flex items-center gap-1.5">
-                          <div className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-gray-400"
-                          )} />
-                          <span className={cn(
-                            "text-[10px] sm:text-xs font-bold uppercase tracking-wider",
-                            scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
-                          )}>
-                            {scrap.status === 'open' ? 'Open' : 'Closed'}
-                          </span>
-                        </div>
+                  {/* Right Side: Content */}
+                  <div className="flex-1 min-w-0 pr-4 py-1">
+                    <h3 className={cn(
+                      "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-3 line-clamp-2 leading-tight tracking-tight",
+                      scrap.title.length > 40 ? "text-base sm:text-lg" : "text-lg sm:text-xl"
+                    )}>
+                      {scrap.title}
+                    </h3>
+                    
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn(
+                          "w-2.5 h-2.5 rounded-full",
+                          scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-gray-400"
+                        )} />
+                        <span className={cn(
+                          "text-[10px] sm:text-[11px] font-black uppercase tracking-widest",
+                          scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
+                        )}>
+                          {scrap.status === 'open' ? 'Open' : 'Closed'}
+                        </span>
+                      </div>
 
-                        <div className="flex items-center gap-3 text-gray-400">
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                            {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
-                          </span>
-                          <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
-                        </div>
+                      <div className="flex items-center gap-5 text-gray-400">
+                        <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5" />
+                          {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                        </span>
+                        <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
+                </motion.div>
                 ))}
               </AnimatePresence>
             </div>

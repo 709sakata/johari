@@ -78,21 +78,21 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-6 sm:p-10"
+        className="glass rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10 overflow-hidden p-8 sm:p-12"
       >
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shadow-sm">
-            <MessageSquare className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center gap-5 mb-10">
+          <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100 transition-transform hover:scale-110">
+            <MessageSquare className="w-7 h-7 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-gray-900">新規スレッド</h2>
-            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">新しい思考の窓を開く</p>
+            <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight">新規スレッド</h2>
+            <p className="text-gray-400 text-[11px] font-black uppercase tracking-[0.2em]">新しい思考の窓を開く</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="title" className="block text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="space-y-3">
+            <label htmlFor="title" className="block text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-2">
               タイトル
             </label>
             <input
@@ -106,16 +106,16 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
                   handleSubmit(e as any);
                 }
               }}
-              placeholder=""
-              className="w-full px-5 py-4 text-lg rounded-2xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-gray-300"
+              placeholder="何について考えますか？"
+              className="w-full px-6 py-5 text-xl font-display font-bold rounded-[1.5rem] border border-gray-100 bg-white/50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-gray-300 shadow-sm"
               autoFocus
               required
               maxLength={100}
             />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="tags" className="block text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+          <div className="space-y-3">
+            <label htmlFor="tags" className="block text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-2">
               タグ
             </label>
             <input
@@ -124,30 +124,30 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="#思考 #アイデア #メモ"
-              className="w-full px-5 py-3 text-sm rounded-2xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-gray-300"
+              className="w-full px-6 py-4 text-sm font-medium rounded-2xl border border-gray-100 bg-white/50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all placeholder:text-gray-300 shadow-sm"
             />
-            <p className="text-[9px] text-gray-400 ml-1">スペースかカンマで区切って入力してください</p>
+            <p className="text-[10px] text-gray-400 ml-2 font-bold">スペースかカンマで区切って入力してください</p>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-6 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all active:scale-95"
+              className="px-6 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-600 transition-all active:scale-95"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !title.trim()}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-100 active:scale-95 text-sm"
+              className="flex items-center justify-center gap-3 px-8 py-3.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-blue-600/20 active:scale-95 text-sm"
             >
               {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
               )}
-              スレッドを作成
+              <span className="font-black uppercase tracking-widest">スレッドを作成</span>
             </button>
           </div>
         </form>

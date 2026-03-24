@@ -11,7 +11,8 @@ import { PublicProfile } from './components/PublicProfile';
 import { QASection } from './components/QASection';
 import { QADetail } from './components/QADetail';
 import { Scrap } from './types';
-import { MessageSquare, Loader2, User as UserIcon, Rss, TrendingUp } from 'lucide-react';
+import { MessageSquare, Loader2, User as UserIcon, Rss, TrendingUp, ArrowUp } from 'lucide-react';
+import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 import { Helmet } from 'react-helmet-async';
@@ -28,6 +29,19 @@ export default function App() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'scraps' | 'qa' | 'mypage' | 'user' | 'new-scrap' | 'analytics'>('scraps');
   const [isEmbed, setIsEmbed] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const isAdmin = user?.email === 'naoki.sakata@hopin.co.jp';
 
@@ -382,19 +396,24 @@ export default function App() {
                   >
                     {/* Landing for unauthenticated users */}
                     {!user && (
-                      <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-b border-gray-100 mb-12 w-full">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 relative">
-                  <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-20" />
-                  <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 relative z-10" />
-                </div>
-                        <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-4 leading-tight max-w-2xl">
-                          まだ知らない自分に出会う、<br/>
-                          <span className="text-blue-600">思考の窓。</span>
-                        </h2>
-                        <p className="text-gray-500 text-base mb-8 max-w-lg leading-relaxed">
-                          じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。
-                        </p>
-                        <Auth />
+                      <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-b border-gray-100 mb-16 w-full relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
+                        <div className="relative z-10">
+                          <div className="w-20 h-20 sm:w-28 sm:h-28 bg-white rounded-[2.5rem] flex items-center justify-center mb-10 mx-auto shadow-2xl shadow-blue-500/10 border border-white/40 glass">
+                            <div className="absolute inset-0 bg-blue-100 rounded-[2.5rem] animate-ping opacity-20" />
+                            <MessageSquare className="w-10 h-10 sm:w-14 sm:h-14 text-blue-600 relative z-10" />
+                          </div>
+                          <h2 className="text-3xl sm:text-6xl font-display font-bold text-gray-900 mb-6 leading-tight max-w-3xl tracking-tight">
+                            まだ知らない自分に出会う、<br/>
+                            <span className="text-blue-600">思考の窓。</span>
+                          </h2>
+                          <p className="text-gray-500 text-lg sm:text-xl mb-12 max-w-xl mx-auto leading-relaxed font-medium">
+                            じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。
+                          </p>
+                          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <Auth />
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -559,6 +578,21 @@ export default function App() {
           </div>
         </main>
 
+        <AnimatePresence>
+          {showBackToTop && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              onClick={scrollToTop}
+              className="fixed bottom-44 sm:bottom-32 right-6 sm:right-10 z-50 p-4 glass rounded-full hover:bg-white text-blue-600 shadow-2xl transition-all active:scale-95 group flex items-center justify-center border border-white/40"
+              title="トップへ戻る"
+            >
+              <ArrowUp className="w-6 h-6 group-hover:-translate-y-0.5 transition-transform" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         <footer className="py-12 border-t border-gray-100 bg-white">
           <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-6">
             <div className="flex items-center gap-2 text-gray-400">
@@ -591,73 +625,68 @@ export default function App() {
 
         {/* Mobile Bottom Navigation */}
         {!isEmbed && (
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 px-6 py-3 flex items-center justify-around z-40">
-            <button
-              onClick={() => {
-                setSelectedScrap(null);
-                setSelectedQATaskId(null);
-                setSelectedUserId(null);
-                setActiveTab('scraps');
-                window.history.pushState({}, '', '/');
-              }}
-              className={`flex flex-col items-center gap-1 transition-all ${
-                activeTab === 'scraps' ? 'text-blue-600' : 'text-gray-400'
-              }`}
-            >
-              <MessageSquare className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-widest">スレッド</span>
-            </button>
-            {isAdmin && (
+          <div className="md:hidden fixed bottom-6 left-6 right-6 z-40">
+            <nav className="bg-white/80 backdrop-blur-xl border border-white/40 px-8 py-4 flex items-center justify-around rounded-[2rem] shadow-2xl shadow-blue-500/10">
               <button
                 onClick={() => {
                   setSelectedScrap(null);
                   setSelectedQATaskId(null);
                   setSelectedUserId(null);
-                  setActiveTab('analytics');
-                  window.history.pushState({}, '', '/analytics');
+                  setActiveTab('scraps');
+                  window.history.pushState({}, '', '/');
                 }}
-                className={`flex flex-col items-center gap-1 transition-all ${
-                  activeTab === 'analytics' ? 'text-indigo-600' : 'text-gray-400'
+                className={`flex flex-col items-center gap-1.5 transition-all relative ${
+                  activeTab === 'scraps' ? 'text-blue-600' : 'text-gray-400'
                 }`}
               >
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-[10px] font-black uppercase tracking-widest">分析</span>
+                <MessageSquare className={cn("w-5 h-5 transition-transform", activeTab === 'scraps' && "scale-110")} />
+                <span className="text-[9px] font-black uppercase tracking-[0.15em]">スレッド</span>
+                {activeTab === 'scraps' && (
+                  <motion.div layoutId="nav-indicator" className="absolute -bottom-1 w-1 h-1 bg-blue-600 rounded-full" />
+                )}
               </button>
-            )}
-{/*
-            <button
-              onClick={() => {
-                setSelectedScrap(null);
-                setSelectedQATaskId(null);
-                setSelectedUserId(null);
-                setActiveTab('qa');
-                window.history.pushState({}, '', '/');
-              }}
-              className={`flex flex-col items-center gap-1 transition-all ${
-                activeTab === 'qa' ? 'text-indigo-600' : 'text-gray-400'
-              }`}
-            >
-              <div className="relative">
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">Q&A</span>
-            </button>
-            */}
-            <button
-              onClick={() => {
-                setActiveTab('mypage');
-                setSelectedScrap(null);
-                setSelectedQATaskId(null);
-                setSelectedUserId(null);
-                window.history.pushState({}, '', '/mypage');
-              }}
-              className={`flex flex-col items-center gap-1 transition-all ${
-                activeTab === 'mypage' ? 'text-gray-900' : 'text-gray-400'
-              }`}
-            >
-              <UserIcon className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-widest">マイページ</span>
-            </button>
-          </nav>
+
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setSelectedScrap(null);
+                    setSelectedQATaskId(null);
+                    setSelectedUserId(null);
+                    setActiveTab('analytics');
+                    window.history.pushState({}, '', '/analytics');
+                  }}
+                  className={`flex flex-col items-center gap-1.5 transition-all relative ${
+                    activeTab === 'analytics' ? 'text-indigo-600' : 'text-gray-400'
+                  }`}
+                >
+                  <TrendingUp className={cn("w-5 h-5 transition-transform", activeTab === 'analytics' && "scale-110")} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.15em]">分析</span>
+                  {activeTab === 'analytics' && (
+                    <motion.div layoutId="nav-indicator" className="absolute -bottom-1 w-1 h-1 bg-indigo-600 rounded-full" />
+                  )}
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setActiveTab('mypage');
+                  setSelectedScrap(null);
+                  setSelectedQATaskId(null);
+                  setSelectedUserId(null);
+                  window.history.pushState({}, '', '/mypage');
+                }}
+                className={`flex flex-col items-center gap-1.5 transition-all relative ${
+                  activeTab === 'mypage' ? 'text-gray-900' : 'text-gray-400'
+                }`}
+              >
+                <UserIcon className={cn("w-5 h-5 transition-transform", activeTab === 'mypage' && "scale-110")} />
+                <span className="text-[9px] font-black uppercase tracking-[0.15em]">マイページ</span>
+                {activeTab === 'mypage' && (
+                  <motion.div layoutId="nav-indicator" className="absolute -bottom-1 w-1 h-1 bg-gray-900 rounded-full" />
+                )}
+              </button>
+            </nav>
+          </div>
         )}
       </div>
     </ErrorBoundary>

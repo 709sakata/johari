@@ -40,7 +40,7 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
   const bio = authorDoc?.data()?.bio;
 
   return (
-    <div className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+    <div className="flex flex-col items-center text-center p-8 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 transition-all hover:shadow-2xl hover:shadow-blue-500/10">
       <div 
         onClick={() => onSelectUser?.(authorId)}
         onKeyDown={(e) => {
@@ -52,19 +52,24 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
         tabIndex={0}
         className="group flex flex-col items-center cursor-pointer focus:outline-none"
       >
-        {authorPhoto && authorPhoto !== "" ? (
-          <img src={authorPhoto} alt={authorName} className="w-16 h-16 rounded-full border-4 border-white shadow-sm mb-3 group-hover:border-blue-100 transition-all" referrerPolicy="no-referrer" />
-        ) : (
-          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 group-hover:bg-blue-50 transition-all">
-            <User className="w-8 h-8 text-gray-300" />
-          </div>
-        )}
-        <p className="font-black text-gray-900 group-hover:text-blue-600 transition-colors">{authorName}</p>
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors" />
+          {authorPhoto && authorPhoto !== "" ? (
+            <img src={authorPhoto} alt={authorName} className="relative w-24 h-24 rounded-full border-4 border-white shadow-2xl group-hover:scale-105 transition-all duration-500 ease-out" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="relative w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-2xl group-hover:scale-105 transition-all duration-500 ease-out">
+              <User className="w-12 h-12 text-gray-300" />
+            </div>
+          )}
+        </div>
+        <p className="font-display font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight mb-1">{authorName}</p>
+        <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">作成者</p>
       </div>
       {bio && (
-        <ExpandableBio bio={bio} className="text-xs mt-2 px-2 w-full" />
+        <ExpandableBio bio={bio} className="text-xs mt-4 px-2 w-full text-gray-500 leading-relaxed font-medium" />
       )}
-      <p className="text-[10px] text-gray-400 mt-3 uppercase tracking-widest font-bold">
+      <div className="w-12 h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent my-6" />
+      <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">
         {createdAt ? formatDistanceToNow(createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}に作成
       </p>
     </div>
@@ -478,23 +483,23 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             </div>
           </div>
 
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div className="mb-6">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-full border ${
+          <div className="glass p-6 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10">
+            <div className="mb-8 sm:mb-10">
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <span className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] rounded-full border ${
                     scrap.status === 'open' 
-                      ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm shadow-emerald-100" 
                       : "bg-gray-50 text-gray-500 border-gray-100"
                   }`}>
                     {scrap.status === 'open' ? 'オープン' : 'クローズ'}
                   </span>
-                  <span className="text-xs sm:text-sm text-gray-400 flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
+                  <span className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     {scrap.createdAt ? formatDistanceToNow(scrap.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
                   </span>
-                  <span className="text-xs sm:text-sm text-gray-400 flex items-center gap-1">
-                    <MessageSquare className="w-4 h-4" />
+                  <span className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     {scrap.commentCount ?? 0}
                   </span>
                 </div>
@@ -503,9 +508,9 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   <div className="relative" ref={menuRef}>
                     <button 
                       onClick={() => setShowMenu(!showMenu)}
-                      className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
+                      className="p-2 sm:p-3 text-gray-400 hover:text-gray-900 hover:bg-white rounded-full transition-all shadow-sm border border-transparent hover:border-gray-100"
                     >
-                      <MoreVertical className="w-5 h-5" />
+                      <MoreVertical className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                     <AnimatePresence>
                       {showMenu && (
@@ -513,19 +518,19 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                           initial={{ opacity: 0, scale: 0.95, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                          className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-10"
+                          className="absolute right-0 mt-3 w-56 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 py-3 z-10"
                         >
                           <button
                             onClick={toggleStatus}
                             disabled={isUpdating}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
                           >
-                            {scrap.status === 'open' ? <Circle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                            {scrap.status === 'open' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                             {scrap.status === 'open' ? 'スレッドを閉じる' : 'スレッドを再開する'}
                           </button>
                           <button
                             onClick={copyThreadAsMarkdown}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
                           >
                             <Copy className="w-4 h-4" />
                             Markdownでコピー
@@ -536,18 +541,19 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                               setShowMenu(false);
                               setIsPickingEmoji(true);
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
                           >
                             <RefreshCw className="w-4 h-4" />
                             絵文字を変更
                           </button>
+                          <div className="my-2 border-t border-gray-50" />
                           <button
                             onClick={() => {
                               setIsDeletingScrap(true);
                               setShowMenu(false);
                             }}
                             disabled={isUpdating}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-all"
                           >
                             <Trash2 className="w-4 h-4" />
                             スレッドを削除
@@ -560,12 +566,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
               </div>
 
               {isEditingTitle ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
                   <input
                     type="text"
                     value={editedTitle}
                     onChange={(e) => setEditedTitle(e.target.value)}
-                    className="flex-1 text-xl sm:text-3xl font-black text-gray-900 leading-tight bg-gray-50 border-b-2 border-blue-600 focus:outline-none px-1 py-0.5"
+                    className="flex-1 text-xl sm:text-4xl font-display font-bold text-gray-900 leading-tight bg-white/50 border-b-4 border-blue-600 focus:outline-none px-2 py-1 rounded-t-xl"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || ((e.metaKey || e.ctrlKey) && e.key === 'Enter')) {
@@ -577,37 +583,39 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                       }
                     }}
                   />
-                  <button
-                    onClick={handleUpdateTitle}
-                    disabled={isUpdating}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                  >
-                    <Check className="w-6 h-6" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsEditingTitle(false);
-                      setEditedTitle(scrap.title);
-                    }}
-                    className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleUpdateTitle}
+                      disabled={isUpdating}
+                      className="p-2 sm:p-3 text-white bg-blue-600 hover:bg-blue-700 rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-95"
+                    >
+                      <Check className="w-5 h-5 sm:w-7 sm:h-7" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingTitle(false);
+                        setEditedTitle(scrap.title);
+                      }}
+                      className="p-2 sm:p-3 text-gray-400 hover:bg-gray-100 rounded-2xl transition-all active:scale-95"
+                    >
+                      <X className="w-5 h-5 sm:w-7 sm:h-7" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="group/title relative inline-block w-full">
                   <h1 
                     className={cn(
-                      "font-black text-gray-900 leading-tight cursor-pointer hover:text-blue-600 transition-colors pr-8 break-words",
-                      scrap.title.length > 50 ? "text-lg sm:text-xl" : 
-                      scrap.title.length > 25 ? "text-xl sm:text-2xl" : 
-                      "text-2xl sm:text-3xl"
+                      "font-display font-bold text-gray-900 leading-tight cursor-pointer hover:text-blue-600 transition-colors pr-10 break-words tracking-tight",
+                      scrap.title.length > 50 ? "text-xl sm:text-3xl" : 
+                      scrap.title.length > 25 ? "text-2xl sm:text-4xl" : 
+                      "text-3xl sm:text-5xl"
                     )}
                     onClick={() => isAuthor && setIsEditingTitle(true)}
                   >
                     {scrap.icon_emoji && (
-                      <span className="relative inline-block mr-1 sm:mr-2 align-top">
-                        <span className="inline-block">
+                      <span className="relative inline-block mr-2 sm:mr-4 align-top">
+                        <span className="inline-block transition-transform hover:rotate-12 cursor-pointer" onClick={openEmojiPicker}>
                           {scrap.icon_emoji}
                         </span>
                         
@@ -628,13 +636,13 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden font-sans"
+                                className="absolute top-full left-0 mt-4 z-50 bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden font-sans"
                                 style={{
                                   // @ts-ignore
                                   '--epr-search-input-font-size': '14px',
                                   '--epr-category-label-font-size': '14px',
                                   '--epr-emoji-size': '24px',
-                                  '--epr-header-padding': '12px 16px',
+                                  '--epr-header-padding': '16px 16px',
                                   '--epr-bg-color': '#ffffff',
                                   '--epr-category-navigation-button-size': '24px',
                                   '--epr-search-input-bg-color': '#f1f3f4',
@@ -675,35 +683,37 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
               )}
 
               {/* Tags Section */}
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="mt-6 flex flex-wrap items-center gap-3">
                 {isEditingTags ? (
-                  <div className="flex items-center gap-2 w-full">
-                    <Hash className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center gap-3 w-full max-w-md bg-gray-50 p-2 rounded-xl border border-gray-100">
+                    <Hash className="w-5 h-5 text-gray-400 ml-2" />
                     <input
                       type="text"
                       value={editedTags}
                       onChange={(e) => setEditedTags(e.target.value)}
                       placeholder="#思考 #アイデア #メモ"
-                      className="flex-1 text-sm bg-gray-50 border-b border-blue-600 focus:outline-none px-1 py-0.5"
+                      className="flex-1 text-sm bg-transparent focus:outline-none py-1"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleUpdateTags();
                         if (e.key === 'Escape') setIsEditingTags(false);
                       }}
                     />
-                    <button
-                      onClick={handleUpdateTags}
-                      disabled={isUpdating}
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setIsEditingTags(false)}
-                      className="p-1 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handleUpdateTags}
+                        disabled={isUpdating}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all"
+                      >
+                        <Check className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setIsEditingTags(false)}
+                        className="p-2 text-gray-400 hover:bg-gray-200 rounded-lg transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -711,23 +721,23 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                       scrap.tags.map(tag => (
                         <span 
                           key={tag}
-                          className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md border border-gray-200"
+                          className="px-3 py-1 bg-white/80 text-gray-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-gray-100 shadow-sm"
                         >
                           #{tag}
                         </span>
                       ))
                     ) : (
                       isAuthor && (
-                        <span className="text-[10px] text-gray-300 font-medium italic">タグなし</span>
+                        <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest italic">タグなし</span>
                       )
                     )}
                     {isAuthor && (
                       <button
                         onClick={() => setIsEditingTags(true)}
-                        className="p-1 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                        className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
                         title="タグを編集"
                       >
-                        <Edit2 className="w-3 h-3" />
+                        <Edit2 className="w-4 h-4" />
                       </button>
                     )}
                   </>
@@ -735,7 +745,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-6 border-t border-gray-50">
+            <div className="flex items-center gap-4 pt-8 border-t border-gray-50">
               <div 
                 onClick={() => onSelectUser?.(scrap.authorId)}
                 onKeyDown={(e) => {
@@ -745,18 +755,18 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 }}
                 role="button"
                 tabIndex={0}
-                className="flex items-center gap-3 group/author w-full max-w-full min-w-0 cursor-pointer focus:outline-none"
+                className="flex items-center gap-4 group/author w-full max-w-full min-w-0 cursor-pointer focus:outline-none"
               >
                 {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
-                  <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-10 h-10 rounded-full border border-gray-100 group-hover:border-blue-100 transition-all" referrerPolicy="no-referrer" />
+                  <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-12 h-12 rounded-full border-2 border-white shadow-md group-hover:scale-110 transition-all" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-all">
-                    <User className="w-5 h-5 text-gray-400" />
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-all shadow-md border-2 border-white">
+                    <User className="w-6 h-6 text-gray-400" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{scrap.authorName}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">作成者</p>
+                  <p className="text-base font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight">{scrap.authorName}</p>
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-0.5">作成者</p>
                 </div>
               </div>
             </div>
@@ -826,7 +836,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
 
         {/* Sidebar */}
         <aside className="hidden lg:flex flex-col gap-6 w-[300px]">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
+          <div className="glass rounded-[2.5rem] overflow-hidden flex-shrink-0">
             <div className="p-6 space-y-6">
               {/* Status Toggle Button */}
               {isAuthor && (
@@ -866,7 +876,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
 
           {/* Table of Contents (Hierarchical) */}
           {parentComments.length > 0 && (
-            <div className="sticky top-20 bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4 flex flex-col min-h-[calc(100vh-100px)] max-h-[calc(100vh-100px)]">
+            <div className="sticky top-20 glass rounded-[2.5rem] p-6 space-y-4 flex flex-col min-h-[calc(100vh-100px)] max-h-[calc(100vh-100px)]">
               <div className="flex items-center justify-between gap-2 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <List className="w-4 h-4 text-blue-600" />
@@ -1022,7 +1032,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
             onClick={scrollToBottom}
-            className="fixed bottom-8 right-8 z-50 p-4 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-95 group flex items-center justify-center"
+            className="fixed bottom-24 sm:bottom-10 right-6 sm:right-10 z-50 p-4 glass rounded-full hover:bg-white text-blue-600 shadow-2xl transition-all active:scale-95 group flex items-center justify-center border border-white/40"
             title="最新の返信へ移動"
           >
             <ChevronDown className="w-6 h-6 group-hover:translate-y-0.5 transition-transform" />
@@ -1106,50 +1116,55 @@ function CommentItem({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`group/comment ${
+      className={`group/comment relative ${
         isReply 
-          ? 'py-2' 
-          : 'bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm scroll-mt-24'
+          ? 'py-3' 
+          : 'bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
       }`}
       id={comment.id}
     >
-      <div className={isReply ? '' : ''}>
-        <div className="flex items-center justify-between gap-2 mb-6">
+      {/* Glass reflection effect */}
+      {!isReply && <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none rounded-[2.5rem]" />}
+
+      <div className="relative z-10">
+        <div className="flex items-center justify-between gap-2 mb-8">
           <button 
             onClick={() => onSelectUser?.(comment.authorId)}
-            className="flex items-center gap-3 group/author"
+            className="flex items-center gap-4 group/author"
           >
-            {comment.authorPhoto && comment.authorPhoto !== "" ? (
-              <img src={comment.authorPhoto} alt={comment.authorName} className="w-8 h-8 rounded-full border border-gray-100 group-hover:border-blue-100 transition-all" referrerPolicy="no-referrer" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-all">
-                <User className="w-4 h-4 text-gray-400" />
-              </div>
-            )}
+            <div className="relative">
+              {comment.authorPhoto && comment.authorPhoto !== "" ? (
+                <img src={comment.authorPhoto} alt={comment.authorName} className="w-10 h-10 rounded-full border-2 border-white shadow-md group-hover/author:scale-110 transition-all" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md border-2 border-white group-hover/author:scale-110 transition-all">
+                  <User className="w-5 h-5 text-gray-400" />
+                </div>
+              )}
+            </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{comment.authorName}</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+              <p className="font-display text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight leading-none mb-1.5">{comment.authorName}</p>
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">
                 {comment.createdAt ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
-                {comment.updatedAt && <span className="ml-2">(編集済み)</span>}
+                {comment.updatedAt && <span className="ml-2 opacity-60">(編集済み)</span>}
               </p>
             </div>
           </button>
 
           {isAuthor && !isEditing && (
-            <div className="flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2 opacity-0 group-hover/comment:opacity-100 transition-opacity">
               <button
                 onClick={() => {
                   setEditingCommentId(comment.id);
                   setEditingCommentContent(comment.content);
                 }}
-                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100"
                 title="編集"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setDeletingCommentId(comment.id)}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm border border-transparent hover:border-red-100"
                 title="削除"
               >
                 <Trash2 className="w-4 h-4" />
@@ -1159,7 +1174,7 @@ function CommentItem({
         </div>
 
         {isEditing ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <TextareaAutosize
               value={editingCommentContent}
               onChange={(e) => setEditingCommentContent(e.target.value)}
@@ -1180,52 +1195,52 @@ function CommentItem({
                   }
                 }
               }}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-sm"
+              className="w-full px-6 py-5 rounded-2xl border border-gray-100 bg-white/50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all resize-none text-base font-medium"
               minRows={4}
               maxRows={20}
               autoFocus
               maxLength={50000}
             />
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setEditingCommentId(null)}
-                className="px-4 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-all"
               >
                 キャンセル
               </button>
               <button
                 onClick={() => handleUpdateComment(comment.id)}
                 disabled={isUpdating || !editingCommentContent.trim()}
-                className="px-4 py-1.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                className="px-8 py-2.5 text-sm font-black uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 active:scale-95"
               >
                 保存
               </button>
             </div>
           </div>
         ) : (
-          <div className="prose prose-base sm:prose-lg prose-blue max-w-none text-gray-800 text-[15px] sm:text-lg leading-relaxed prose-headings:font-black prose-h1:text-xl sm:prose-h1:text-3xl prose-h2:text-lg sm:prose-h2:text-2xl prose-h3:text-base sm:prose-h3:text-xl prose-h4:text-[15px] sm:prose-h4:text-lg prose-p:text-inherit prose-li:text-inherit">
+          <div className="prose prose-base sm:prose-lg prose-blue max-w-none text-gray-800 text-[16px] sm:text-[18px] leading-relaxed prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-2xl sm:prose-h1:text-3xl prose-h2:text-xl sm:prose-h2:text-2xl prose-h3:text-lg sm:prose-h3:text-xl prose-h4:text-base sm:prose-h4:text-lg prose-p:text-inherit prose-li:text-inherit">
             <ReactMarkdown 
               remarkPlugins={[remarkGfm, remarkEmoji, remarkMath]} 
               rehypePlugins={[rehypeRaw, rehypeHighlight, rehypeKatex]}
               components={{
-                p: ({ children }) => <div className="mb-4 last:mb-0">{children}</div>,
+                p: ({ children }) => <div className="mb-5 last:mb-0">{children}</div>,
                 table: ({ children }) => (
-                  <div className="overflow-x-auto my-4 border border-gray-100 rounded-lg">
+                  <div className="overflow-x-auto my-6 border border-gray-100 rounded-2xl shadow-sm">
                     <table className="w-max min-w-full divide-y divide-gray-200">{children}</table>
                   </div>
                 ),
                 th: ({ children }) => (
-                  <th className="px-4 py-2 bg-gray-50 font-bold text-gray-700 whitespace-nowrap">{children}</th>
+                  <th className="px-5 py-3 bg-gray-50 font-black uppercase tracking-widest text-[11px] text-gray-500 whitespace-nowrap">{children}</th>
                 ),
                 td: ({ children }) => (
-                  <td className="px-4 py-2 whitespace-nowrap">{children}</td>
+                  <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-gray-700">{children}</td>
                 ),
                 img: ({ node, ...props }) => {
                   if (!props.src || props.src === "") return null;
                   return (
                     <img 
                       {...props} 
-                      className="max-h-64 sm:max-h-96 rounded-xl shadow-sm cursor-zoom-in hover:opacity-95 transition-opacity my-4" 
+                      className="max-h-64 sm:max-h-96 rounded-2xl shadow-xl cursor-zoom-in hover:opacity-95 transition-all hover:scale-[1.02] my-6" 
                       onClick={() => {
                         setEnlargedImageUrl(props.src || null);
                         setIsEnlarged(true);
@@ -1242,7 +1257,7 @@ function CommentItem({
                     return (
                       <ScrapMention 
                         scrapId={scrapId} 
-                        className="my-1" 
+                        className="my-2" 
                         onClick={async () => {
                           if (onSelectScrap) {
                             try {
@@ -1261,13 +1276,13 @@ function CommentItem({
 
                   if (isUrl && props.href) {
                     return (
-                      <span className="block not-prose my-4">
+                      <span className="block not-prose my-6">
                         <LinkPreview url={props.href} />
                       </span>
                     );
                   }
                   return (
-                    <a {...props} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" />
+                    <a {...props} className="text-blue-600 hover:underline font-bold" target="_blank" rel="noopener noreferrer" />
                   );
                 }
               }}
@@ -1277,29 +1292,35 @@ function CommentItem({
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="mt-8 flex items-center justify-between">
+          <div className="flex items-center gap-6">
             {!isEditing && scrapStatus === 'open' && (
               <button
                 onClick={() => setIsReplying(!isReplying)}
-                className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-all group/reply"
               >
-                <Reply className="w-3.5 h-3.5" />
+                <div className="p-2 bg-gray-50 group-hover/reply:bg-blue-50 rounded-lg transition-colors">
+                  <Reply className="w-4 h-4" />
+                </div>
                 <span className="hidden sm:inline">返信を追加</span>
               </button>
             )}
             {!isEditing && (
               <button
                 onClick={copyCommentAsMarkdown}
-                className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded-md"
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 transition-all group/copy"
                 title="Markdownとしてコピー"
               >
-                <Copy className="w-3.5 h-3.5" />
+                <div className="p-2 bg-gray-50 group-hover/copy:bg-blue-50 rounded-lg transition-colors">
+                  <Copy className="w-4 h-4" />
+                </div>
               </button>
             )}
             {replies.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
-                <MessageSquare className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-400">
+                <div className="p-2 bg-gray-50 rounded-lg">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
                 {replies.length} 件の返信
               </div>
             )}

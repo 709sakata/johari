@@ -120,62 +120,67 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
         </script>
       </Helmet>
       {/* Profile Header */}
-      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
+      <div className="glass p-6 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/5 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        
+        <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-12 text-center sm:text-left">
           {/* Avatar Area */}
-          <div className="relative group">
+          <div className="relative group/avatar flex-shrink-0">
             {userProfile.photoURL && userProfile.photoURL !== "" ? (
               <img 
                 src={userProfile.photoURL} 
                 alt={userProfile.displayName || ''} 
-                className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl shadow-sm border-2 border-gray-50 object-cover" 
+                className="w-24 h-24 sm:w-40 sm:h-40 rounded-[2rem] sm:rounded-[3rem] shadow-2xl border-4 border-white object-cover transition-all duration-500 group-hover/avatar:scale-105 group-hover/avatar:rotate-3" 
                 referrerPolicy="no-referrer" 
               />
             ) : (
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-gray-50 flex items-center justify-center border-2 border-gray-50">
-                <User className="w-12 h-12 text-gray-300" />
+              <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-[2rem] sm:rounded-[3rem] bg-white/50 backdrop-blur-sm flex items-center justify-center border-4 border-white shadow-xl">
+                <User className="w-12 h-12 sm:w-20 sm:h-20 text-gray-300" />
               </div>
             )}
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-12 sm:h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20 border-2 border-white">
+              <User className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
           </div>
 
           {/* Info Area */}
-          <div className="flex-1 flex flex-col items-center text-center md:items-start md:text-left gap-6 min-w-0">
-            <div className="space-y-3 w-full">
-              <h2 className="text-lg sm:text-3xl font-black text-gray-900 tracking-tight">
+          <div className="flex-1 flex flex-col items-center sm:items-start gap-4 sm:gap-8 min-w-0">
+            <div className="space-y-2 sm:space-y-4 w-full">
+              <h2 className="font-display text-2xl sm:text-5xl font-bold text-gray-900 tracking-tight">
                 {userProfile.displayName || 'Anonymous'}
               </h2>
               {userProfile.bio ? (
-                <ExpandableBio bio={userProfile.bio} className="max-w-xl mx-auto md:mx-0 font-medium text-gray-500" />
+                <ExpandableBio bio={userProfile.bio} className="max-w-2xl font-medium text-gray-600 text-sm sm:text-lg leading-relaxed" />
               ) : (
-                <p className="text-xs text-gray-400 italic">自己紹介はありません</p>
+                <p className="text-xs sm:text-sm text-gray-400 italic font-medium">自己紹介はありません</p>
               )}
             </div>
 
-            <div className="flex flex-wrap justify-center md:justify-start items-center gap-4">
+            <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6">
               {/* Links */}
               {(userProfile.links || []).length > 0 && (
                 <button
                   onClick={() => setIsLinksDialogOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full border border-gray-200 transition-all active:scale-95 group"
+                  className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-white/60 hover:bg-white text-gray-600 rounded-full border border-white/40 shadow-sm transition-all active:scale-95 group"
                 >
-                  <LinkIcon className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-black uppercase tracking-wider">ソースリンク</span>
-                  <span className="px-1.5 py-0.5 bg-gray-900 text-white text-[9px] font-black rounded-full min-w-[1.5rem] text-center">
+                  <LinkIcon className="w-4 h-4 text-blue-500" />
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">ソースリンク</span>
+                  <span className="px-2 py-0.5 bg-gray-900 text-white text-[9px] sm:text-[10px] font-black rounded-full min-w-[1.5rem] text-center">
                     {(userProfile.links || []).length}
                   </span>
                 </button>
               )}
 
               {/* Quick Stats */}
-              <div className="flex items-center gap-4 py-1 px-4 bg-gray-50/50 rounded-full border border-gray-100/50">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Threads</span>
-                  <span className="text-xs font-black text-gray-900">{allScraps.length}</span>
+              <div className="flex items-center gap-6 sm:gap-8 py-2 px-6 sm:px-8 bg-white/40 backdrop-blur-sm rounded-full border border-white/40 shadow-sm">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">Threads</span>
+                  <span className="text-sm sm:text-lg font-black text-gray-900">{allScraps.length}</span>
                 </div>
-                <div className="w-px h-3 bg-gray-200" />
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-black text-gray-900">{allScraps.filter(s => s.status === 'open').length}</span>
+                <div className="w-px h-4 sm:h-6 bg-gray-200/50" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
+                  <span className="text-sm sm:text-lg font-black text-gray-900">{allScraps.filter(s => s.status === 'open').length}</span>
                 </div>
               </div>
             </div>
@@ -187,73 +192,75 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
       {/* <QASection userId={userId} /> */}
 
       {/* Scraps Section */}
-      <div className="space-y-6">
-        <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 ml-2">
-          <MessageSquare className="w-6 h-6 text-blue-600" />
+      <div className="space-y-8">
+        <h3 className="font-display text-2xl font-bold text-gray-900 flex items-center gap-4 ml-2 tracking-tight">
+          <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+            <MessageSquare className="w-5 h-5 text-white" />
+          </div>
           スレッド一覧
         </h3>
         
         <div className="space-y-0">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
             </div>
           ) : error ? (
-            <div className="p-6 bg-red-50 border border-red-100 rounded-xl text-red-600">
+            <div className="p-8 glass border border-red-100 rounded-[2rem] text-red-600">
               <p className="font-bold">スレッドの取得に失敗しました</p>
             </div>
           ) : allScraps.length === 0 ? (
-            <div className="text-center py-20 px-4 bg-white rounded-3xl border border-gray-100 border-dashed">
-              <h3 className="text-lg font-bold text-gray-900">
+            <div className="text-center py-24 px-4 glass rounded-[2.5rem] border border-dashed border-gray-200">
+              <h3 className="font-display text-xl font-bold text-gray-900">
                 スレッドはありません
               </h3>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 bg-white p-4 sm:p-6 rounded-3xl border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <AnimatePresence mode="popLayout">
                 {allScraps.map((scrap, index) => (
                   <motion.div
                     key={scrap.id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => onSelectScrap(scrap)}
-                    className="group relative w-full p-2 bg-slate-50/80 hover:bg-slate-100/80 rounded-[2rem] transition-all cursor-pointer overflow-hidden flex items-center gap-4 sm:gap-5"
+                    className="group relative w-full p-5 bg-white/60 backdrop-blur-md hover:bg-white rounded-[2.5rem] border border-white/40 hover:border-blue-200 transition-all cursor-pointer overflow-hidden flex items-center gap-6 hover:shadow-2xl hover:-translate-y-1 shadow-xl shadow-blue-500/5"
                   >
                     {/* Left Side: Emoji Block */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 shadow-sm">
-                      <span className="text-2xl sm:text-3xl select-none">
+                    <div className="w-20 h-20 sm:w-28 sm:h-28 bg-white rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:bg-blue-50 shadow-sm border border-gray-50">
+                      <span className="text-3xl sm:text-5xl select-none transform transition-transform duration-500 group-hover:rotate-12">
                         {scrap.icon_emoji || '📄'}
                       </span>
                     </div>
 
                     {/* Right Side: Content */}
-                    <div className="flex-1 min-w-0 pr-4 sm:pr-6 py-1">
+                    <div className="flex-1 min-w-0 pr-4 py-1">
                       <h3 className={cn(
-                        "font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 line-clamp-2 leading-tight",
-                        scrap.title.length > 40 ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+                        "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-3 line-clamp-2 leading-tight tracking-tight",
+                        scrap.title.length > 40 ? "text-base sm:text-lg" : "text-lg sm:text-xl"
                       )}>
                         {scrap.title}
                       </h3>
                       
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <div className="flex items-center gap-2.5">
                           <div className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-gray-400"
+                            "w-2.5 h-2.5 rounded-full",
+                            scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-gray-400"
                           )} />
                           <span className={cn(
-                            "text-[10px] sm:text-xs font-bold uppercase tracking-wider",
+                            "text-[10px] sm:text-[11px] font-black uppercase tracking-widest",
                             scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
                           )}>
                             {scrap.status === 'open' ? 'Open' : 'Closed'}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 text-gray-400">
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <div className="flex items-center gap-5 text-gray-400">
+                          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5" />
                             {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
                           </span>
                           <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />

@@ -1,70 +1,83 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
 
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+}
+
 @layer base {
+  body {
+    @apply font-sans text-gray-900 bg-[#fbfbfd];
+  }
+
   .prose {
     @apply text-gray-800 leading-relaxed break-words;
   }
   .prose h1 {
-    @apply text-2xl font-black mt-8 mb-4 pb-2 border-b border-gray-100;
+    @apply font-display text-3xl font-bold mt-10 mb-6 pb-2 border-b border-gray-100 tracking-tight;
   }
   .prose h2 {
-    @apply text-xl font-black mt-7 mb-3 pb-1 border-b border-gray-50;
+    @apply font-display text-2xl font-bold mt-8 mb-4 pb-1 border-b border-gray-50 tracking-tight;
   }
   .prose h3 {
-    @apply text-lg font-bold mt-6 mb-2;
+    @apply font-display text-xl font-bold mt-6 mb-3 tracking-tight;
   }
   .prose p {
-    @apply mb-4 leading-7;
+    @apply mb-5 leading-8 text-[1.05rem];
   }
   .prose ul {
-    @apply list-disc list-outside ml-6 mb-4 space-y-1;
+    @apply list-disc list-outside ml-6 mb-5 space-y-2;
   }
   .prose ol {
-    @apply list-decimal list-outside ml-6 mb-4 space-y-1;
+    @apply list-decimal list-outside ml-6 mb-5 space-y-2;
   }
   .prose li {
     @apply pl-1;
   }
   .prose code:not(pre code) {
-    @apply bg-gray-100 px-1.5 py-0.5 rounded font-mono text-sm text-pink-600 font-medium;
+    @apply bg-gray-100 px-1.5 py-0.5 rounded font-mono text-[0.9em] text-blue-600 font-medium;
   }
   .prose pre {
-    @apply bg-gray-900 text-gray-100 p-5 rounded-2xl overflow-x-auto mb-6 font-mono text-sm shadow-inner;
+    @apply bg-gray-900 text-gray-100 p-6 rounded-2xl overflow-x-auto mb-8 font-mono text-sm shadow-xl;
   }
   .prose pre code {
     @apply bg-transparent p-0;
   }
   .prose blockquote {
-    @apply border-l-4 border-blue-200 pl-5 italic text-gray-500 mb-6 bg-blue-50/30 py-1 rounded-r-lg;
+    @apply border-l-4 border-blue-500 pl-6 italic text-gray-600 mb-8 bg-blue-50/50 py-4 rounded-r-2xl;
   }
   .prose a {
-    @apply text-blue-600 hover:underline font-medium;
+    @apply text-blue-600 hover:text-blue-700 underline underline-offset-4 decoration-2 decoration-blue-200 hover:decoration-blue-400 transition-all font-semibold;
   }
   .prose table {
-    @apply w-full border-collapse mb-6 text-sm;
+    @apply w-full border-collapse mb-8 text-sm overflow-hidden rounded-xl border border-gray-100;
   }
   .prose th {
-    @apply bg-gray-50 border border-gray-200 px-4 py-2 text-left font-bold;
+    @apply bg-gray-50 border-b border-gray-100 px-4 py-3 text-left font-bold text-gray-700;
   }
   .prose td {
-    @apply border border-gray-200 px-4 py-2;
+    @apply border-b border-gray-50 px-4 py-3 text-gray-600;
   }
   .prose hr {
-    @apply my-8 border-t border-gray-100;
+    @apply my-10 border-t border-gray-100;
   }
   .prose img {
-    @apply rounded-2xl shadow-md my-6 max-w-full h-auto;
+    @apply rounded-[2rem] shadow-2xl my-10 max-w-full h-auto ring-1 ring-black/5;
   }
   .prose input[type="checkbox"] {
     @apply rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2;
   }
   .katex-display {
-    @apply my-6 overflow-x-auto overflow-y-hidden py-2;
+    @apply my-8 overflow-x-auto overflow-y-hidden py-4;
+  }
+
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     @apply bg-transparent;

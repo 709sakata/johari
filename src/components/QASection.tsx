@@ -205,119 +205,127 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
   const syncRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowTwin(false)}
-            className={cn(
-              "flex items-center gap-2.5 transition-all",
-              !showTwin ? "opacity-100" : "opacity-40 hover:opacity-100"
-            )}
-          >
-            <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
-              <HelpCircle className="w-5 h-5 text-indigo-600" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-lg font-black text-gray-900 tracking-tight">Q&A</h2>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Audit Agent</p>
-            </div>
-          </button>
-
-          <div className="w-px h-8 bg-gray-100 hidden sm:block" />
-
-          <button 
-            onClick={() => setShowTwin(true)}
-            className={cn(
-              "flex items-center gap-2.5 transition-all",
-              showTwin ? "opacity-100" : "opacity-40 hover:opacity-100"
-            )}
-          >
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <Fingerprint className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-lg font-black text-gray-900 tracking-tight">Digital Twin</h2>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Living State</p>
-            </div>
-          </button>
-        </div>
-
-        {/* Sync Rate Meter */}
-        {!showTwin ? (
-          <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-right">
-              <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-0.5">Sync Rate</p>
-              <p className={cn(
-                "text-lg font-black tabular-nums leading-none",
-                syncRate > 80 ? "text-emerald-600" : syncRate > 40 ? "text-indigo-600" : "text-amber-600"
+      <div className="glass p-4 sm:p-6 rounded-[2rem] border border-white/40 shadow-xl shadow-indigo-500/5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setShowTwin(false)}
+              className={cn(
+                "flex items-center gap-3.5 transition-all group",
+                !showTwin ? "opacity-100 scale-105" : "opacity-40 hover:opacity-80"
+              )}
+            >
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
+                !showTwin ? "bg-indigo-600 text-white shadow-indigo-200" : "bg-white text-indigo-600 shadow-sm"
               )}>
-                {syncRate}<span className="text-xs ml-0.5">%</span>
-              </p>
-            </div>
-            <div className="w-8 h-8 relative">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="16"
-                  cy="16"
-                  r="13"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  fill="transparent"
-                  className="text-gray-100"
-                />
-                <circle
-                  cx="16"
-                  cy="16"
-                  r="13"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  fill="transparent"
-                  strokeDasharray={81.68}
-                  strokeDashoffset={81.68 - (81.68 * syncRate) / 100}
-                  strokeLinecap="round"
-                  className={cn(
-                    "transition-all duration-1000 ease-out",
-                    syncRate > 80 ? "text-emerald-500" : syncRate > 40 ? "text-indigo-500" : "text-amber-500"
-                  )}
-                />
-              </svg>
-            </div>
-            {isOwner && (
-              <button
-                onClick={generateTasks}
-                disabled={isGenerating}
-                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all disabled:opacity-50"
-                title="再観測する"
-              >
-                <RefreshCw className={cn("w-4 h-4", isGenerating && "animate-spin")} />
-              </button>
-            )}
+                <HelpCircle className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-xl font-display font-bold text-gray-900 tracking-tight">Q&A</h2>
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Audit Agent</p>
+              </div>
+            </button>
+
+            <div className="w-px h-10 bg-gray-100 hidden sm:block" />
+
+            <button 
+              onClick={() => setShowTwin(true)}
+              className={cn(
+                "flex items-center gap-3.5 transition-all group",
+                showTwin ? "opacity-100 scale-105" : "opacity-40 hover:opacity-80"
+              )}
+            >
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
+                showTwin ? "bg-emerald-600 text-white shadow-emerald-200" : "bg-white text-emerald-600 shadow-sm"
+              )}>
+                <Fingerprint className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-xl font-display font-bold text-gray-900 tracking-tight">Digital Twin</h2>
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Living State</p>
+              </div>
+            </button>
           </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            {isOwner && identityState && (
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Export Twin
-              </button>
-            )}
-            {isOwner && (
-              <button
-                onClick={generateTasks}
-                disabled={isGenerating}
-                className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 disabled:opacity-50"
-                title="状態を更新する"
-              >
-                <RefreshCw className={cn("w-4 h-4", isGenerating && "animate-spin")} />
-              </button>
-            )}
-          </div>
-        )}
+
+          {/* Sync Rate Meter / Controls */}
+          {!showTwin ? (
+            <div className="flex items-center gap-4 px-5 py-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm">
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Sync Rate</p>
+                <p className={cn(
+                  "text-2xl font-display font-bold tabular-nums leading-none",
+                  syncRate > 80 ? "text-emerald-600" : syncRate > 40 ? "text-indigo-600" : "text-amber-600"
+                )}>
+                  {syncRate}<span className="text-sm ml-0.5">%</span>
+                </p>
+              </div>
+              <div className="w-10 h-10 relative">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r="17"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="transparent"
+                    className="text-gray-100"
+                  />
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r="17"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="transparent"
+                    strokeDasharray={106.8}
+                    strokeDashoffset={106.8 - (106.8 * syncRate) / 100}
+                    strokeLinecap="round"
+                    className={cn(
+                      "transition-all duration-1000 ease-out",
+                      syncRate > 80 ? "text-emerald-500" : syncRate > 40 ? "text-indigo-500" : "text-amber-500"
+                    )}
+                  />
+                </svg>
+              </div>
+              {isOwner && (
+                <button
+                  onClick={generateTasks}
+                  disabled={isGenerating}
+                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-xl transition-all disabled:opacity-50 shadow-sm hover:shadow-md"
+                  title="再観測する"
+                >
+                  <RefreshCw className={cn("w-5 h-5", isGenerating && "animate-spin")} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {isOwner && identityState && (
+                <button
+                  onClick={handleExport}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-2xl text-[11px] font-black uppercase tracking-widest text-gray-500 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm hover:shadow-md"
+                >
+                  <Zap className="w-4 h-4" />
+                  Export Twin
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={generateTasks}
+                  disabled={isGenerating}
+                  className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 active:scale-95"
+                  title="状態を更新する"
+                >
+                  <RefreshCw className={cn("w-5 h-5", isGenerating && "animate-spin")} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -331,40 +339,42 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
           >
             {pendingTasks.length === 0 ? (
               isOwner && (
-                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200 mx-2">
-                  <HelpCircle className="w-6 h-6 text-indigo-200 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500 font-medium">
+                <div className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-[2.5rem] border border-dashed border-gray-200 mx-2">
+                  <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <HelpCircle className="w-8 h-8 text-indigo-200" />
+                  </div>
+                  <p className="text-sm text-gray-500 font-medium">
                     まだ問いはありません。
                   </p>
                   <button
                     onClick={generateTasks}
-                    className="mt-3 px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                    className="mt-6 px-8 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                   >
                     問いを生成
                   </button>
                 </div>
               )
             ) : (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-6">
                 {pendingTasks.map((task) => (
                   <motion.div
                     key={task.id}
                     layout
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="group relative bg-white p-5 rounded-2xl transition-all border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100"
+                    className="group relative bg-white p-6 sm:p-8 rounded-[2.5rem] transition-all border border-gray-100 shadow-sm hover:shadow-2xl hover:border-indigo-100 hover:-translate-y-1"
                   >
-                    <div className="flex flex-col md:flex-row items-start gap-5">
+                    <div className="flex flex-col md:flex-row items-start gap-6">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm bg-indigo-50 text-indigo-600"
+                        "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg bg-indigo-50 text-indigo-600 transition-transform group-hover:scale-110"
                       )}>
-                        <Fingerprint className="w-5 h-5" />
+                        <Fingerprint className="w-7 h-7" />
                       </div>
-                      <div className="flex-1 space-y-4">
+                      <div className="flex-1 space-y-6">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700"
+                              "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-indigo-100 text-indigo-700"
                             )}>
                               Digital Twin Edit
                             </span>
@@ -374,9 +384,9 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                                   e.stopPropagation();
                                   onSelectScrap(task.scrapId!);
                                 }}
-                                className="flex items-center gap-1 text-[9px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
+                                className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
                               >
-                                <MessageSquare className="w-3 h-3" />
+                                <MessageSquare className="w-3.5 h-3.5" />
                                 スレッドを表示
                               </button>
                             )}
@@ -387,40 +397,40 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                                 e.stopPropagation();
                                 handleDelete(task.id);
                               }}
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                               title="削除する"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
 
                         {task.steps && (
                           <div className={cn(
-                            "space-y-4 border-l pl-4 py-0.5 border-indigo-100"
+                            "space-y-5 border-l-2 pl-6 py-1 border-indigo-100"
                           )}>
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               <p className={cn(
-                                "text-[9px] font-black uppercase tracking-widest text-indigo-400"
+                                "text-[10px] font-black uppercase tracking-widest text-indigo-400"
                               )}>
                                 Observation
                               </p>
-                              <p className="text-xs font-mono text-gray-600 whitespace-pre-wrap leading-relaxed">{task.steps.observation}</p>
+                              <p className="text-sm font-mono text-gray-600 whitespace-pre-wrap leading-relaxed">{task.steps.observation}</p>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               <p className={cn(
-                                "text-[9px] font-black uppercase tracking-widest text-indigo-400"
+                                "text-[10px] font-black uppercase tracking-widest text-indigo-400"
                               )}>
                                 Missing Link (Gap)
                               </p>
-                              <p className="text-sm font-bold text-gray-800 leading-tight">{task.steps.gap}</p>
+                              <p className="text-lg font-display font-bold text-gray-800 leading-tight">{task.steps.gap}</p>
                             </div>
                           </div>
                         )}
 
-                        <div className="space-y-1.5">
-                          <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest">Question</p>
-                          <p className="text-base font-bold text-gray-900 leading-tight whitespace-pre-wrap font-mono">
+                        <div className="space-y-2">
+                          <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Question</p>
+                          <p className="text-xl font-display font-bold text-gray-900 leading-tight whitespace-pre-wrap">
                             {task.question}
                           </p>
                         </div>
@@ -429,11 +439,11 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                           <motion.div 
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
-                            className="space-y-4 pt-4 border-t border-gray-50"
+                            className="space-y-5 pt-6 border-t border-gray-50"
                           >
                             {syncingTaskId === task.id ? (
-                              <div className="py-8 flex flex-col items-center justify-center gap-4">
-                                <div className="relative w-16 h-16">
+                              <div className="py-10 flex flex-col items-center justify-center gap-5">
+                                <div className="relative w-20 h-20">
                                   <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -442,15 +452,15 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                                   <motion.div
                                     animate={{ rotate: -360 }}
                                     transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                    className="absolute inset-2 border-2 border-indigo-200 border-b-transparent rounded-full"
+                                    className="absolute inset-3 border-2 border-indigo-200 border-b-transparent rounded-full"
                                   />
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    <RefreshCw className="w-5 h-5 text-indigo-600 animate-pulse" />
+                                    <RefreshCw className="w-6 h-6 text-indigo-600 animate-pulse" />
                                   </div>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 animate-pulse">Syncing Answer...</p>
-                                  <p className="text-[8px] text-gray-400 font-bold mt-1">答えを鏡の中に刻んでいます</p>
+                                  <p className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600 animate-pulse">Syncing Answer...</p>
+                                  <p className="text-[10px] text-gray-400 font-bold mt-2">答えを鏡の中に刻んでいます</p>
                                 </div>
                               </div>
                             ) : (
@@ -461,31 +471,31 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                                     onChange={(e) => setAnswerInput(e.target.value)}
                                     onKeyDown={handleAnswerKeyDown}
                                     placeholder="あなたの『事実』を言葉にしてください..."
-                                    className="w-full p-5 bg-slate-50/50 border border-indigo-100 rounded-2xl text-xs font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all min-h-[120px] resize-none font-mono leading-relaxed"
+                                    className="w-full p-6 bg-slate-50/50 border border-indigo-100 rounded-[2rem] text-sm font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all min-h-[160px] resize-none font-mono leading-relaxed"
                                     maxLength={50000}
                                   />
-                                  <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-100 shadow-sm">
+                                  <div className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm">
                                     <span className={cn(
-                                      "text-[9px] font-black tabular-nums",
+                                      "text-[10px] font-black tabular-nums",
                                       answerInput.length > 0 ? "text-indigo-600" : "text-gray-300"
                                     )}>
                                       {answerInput.length}
                                     </span>
-                                    <div className="w-px h-2 bg-gray-200" />
-                                    <Edit2 className="w-2.5 h-2.5 text-gray-400" />
+                                    <div className="w-px h-3 bg-gray-200" />
+                                    <Edit2 className="w-3 h-3 text-gray-400" />
                                   </div>
                                 </div>
-                                <div className="flex justify-end items-center gap-4">
+                                <div className="flex justify-end items-center gap-6">
                                   <button
                                     onClick={() => setAnsweringTaskId(null)}
-                                    className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors"
                                   >
                                     Cancel
                                   </button>
                                   <button
                                     onClick={() => handleAnswer(task.id)}
                                     disabled={!answerInput.trim()}
-                                    className="px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.15em] rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-50 disabled:grayscale"
+                                    className="px-8 py-3 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 active:scale-95 disabled:opacity-50 disabled:grayscale"
                                   >
                                     同期を開始する
                                   </button>
@@ -497,10 +507,10 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                           isOwner && (
                             <button
                               onClick={() => setAnsweringTaskId(task.id)}
-                              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 text-[10px] font-black uppercase tracking-widest group/btn pt-1"
+                              className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 text-[11px] font-black uppercase tracking-widest group/btn pt-2"
                             >
                               答えを出す
-                              <Sparkles className="w-3 h-3 group-hover:scale-125 transition-transform" />
+                              <Sparkles className="w-4 h-4 group-hover:scale-125 transition-transform" />
                             </button>
                           )
                         )}
@@ -636,30 +646,30 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
       </AnimatePresence>
       
       {tasks.some(t => t.status === 'completed') && (
-        <div className="px-2 pt-10 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">回答済みの問い</p>
-            <div className="h-px flex-1 bg-gradient-to-r from-gray-100 to-transparent ml-4" />
+        <div className="px-2 pt-12 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-8">
+            <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.25em]">回答済みの問い</p>
+            <div className="h-px flex-1 bg-gradient-to-r from-gray-100 to-transparent ml-6" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {tasks.filter(t => t.status === 'completed').slice(0, 10).map(task => (
               <motion.div 
                 key={task.id} 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => onSelectTask?.(task.id)}
-                className="group relative flex flex-col gap-3 p-4 bg-white rounded-2xl border border-gray-50 shadow-sm hover:shadow-md hover:border-indigo-100/50 transition-all overflow-hidden cursor-pointer"
+                className="group relative flex flex-col gap-4 p-6 bg-white/60 backdrop-blur-sm rounded-[2rem] border border-white/40 shadow-sm hover:shadow-xl hover:border-indigo-100/50 transition-all overflow-hidden cursor-pointer"
               >
                 {/* Glass reflection effect */}
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
-                <div className="absolute -top-10 -right-10 w-20 h-20 bg-indigo-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute -top-10 -right-10 w-24 h-24 bg-indigo-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 bg-emerald-50 rounded-md flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                     </div>
-                    <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">
+                    <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
                       {task.type === 'digital-twin-edit' ? 'Digital Twin Edit' : 'Reflection'}
                     </span>
                   </div>
@@ -669,32 +679,32 @@ export function QASection({ userId: propUserId, onSelectTask, onSelectScrap }: Q
                         e.stopPropagation();
                         handleDelete(task.id);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all z-10"
+                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all z-10"
                       title="削除する"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
                 
-                <div className="space-y-2">
-                  <p className="text-[11px] text-gray-900 font-bold leading-tight line-clamp-2">
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-900 font-display font-bold leading-tight line-clamp-2">
                     {task.question}
                   </p>
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-gray-100">
-                    <p className="text-[10px] text-gray-500 italic line-clamp-2 leading-relaxed">
+                  <div className="p-3.5 bg-slate-50/50 rounded-xl border border-gray-100/50">
+                    <p className="text-[11px] text-gray-500 italic line-clamp-2 leading-relaxed font-mono">
                       "{task.answer}"
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[8px] text-gray-300 font-bold">
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-[9px] text-gray-300 font-bold">
                     {task.updatedAt ? new Date(task.updatedAt.seconds * 1000).toLocaleDateString() : ''}
                   </span>
-                  <div className="flex gap-1">
-                    <div className="w-1 h-1 rounded-full bg-indigo-200" />
-                    <div className="w-1 h-1 rounded-full bg-indigo-100" />
+                  <div className="flex gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-200" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-100" />
                   </div>
                 </div>
               </motion.div>

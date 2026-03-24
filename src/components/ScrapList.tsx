@@ -67,12 +67,14 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
 
   if (scraps.length === 0) {
     return (
-      <div className="text-center py-20 px-4">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <MessageSquare className="w-8 h-8 text-gray-400" />
+      <div className="text-center py-32 px-4">
+        <div className="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/5 ring-1 ring-black/5">
+          <Sparkles className="w-10 h-10 text-blue-600" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900">スレッドがありません</h3>
-        <p className="text-gray-500 mt-1">最初のスレッドを作成して、思考の記録を始めましょう。</p>
+        <h3 className="font-display text-2xl font-bold text-gray-900 mb-3 tracking-tight">思考の旅を始めましょう</h3>
+        <p className="text-gray-500 max-w-sm mx-auto leading-relaxed">
+          まだスレッドがありません。最初のスレッドを作成して、あなたの思考を記録し、未知の自分を発見しましょう。
+        </p>
       </div>
     );
   }
@@ -83,7 +85,7 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
         <ScrapStats scraps={scraps} className="w-full sm:w-64" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
         {scraps.map((scrap, index) => (
           <motion.div
             key={scrap.id}
@@ -91,79 +93,82 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             onClick={() => onSelectScrap(scrap)}
-            className="group relative w-full p-2 bg-slate-50/80 hover:bg-slate-100/80 rounded-[2rem] transition-all cursor-pointer overflow-hidden flex items-center gap-4 sm:gap-5"
+            className="group relative w-full p-3.5 sm:p-4 bg-white/60 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2.5rem] transition-all cursor-pointer overflow-hidden flex items-center gap-4 sm:gap-8 border border-white/40 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-100 hover:-translate-y-1.5"
           >
+            {/* Glass reflection effect */}
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+            
             {/* Left Side: Emoji Block (Rounded Rectangle) */}
-            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
-              <span className="text-2xl sm:text-3xl select-none">
+            <div className="w-16 h-16 sm:w-32 sm:h-32 bg-slate-50 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 group-hover:bg-blue-50 shadow-inner">
+              <span className="text-3xl sm:text-5xl select-none filter drop-shadow-sm transition-transform group-hover:rotate-12">
                 {scrap.icon_emoji || '📄'}
               </span>
             </div>
 
             {/* Right Side: Content */}
-            <div className="flex-1 min-w-0 pr-4 sm:pr-6 py-1">
+            <div className="flex-1 min-w-0 pr-2 sm:pr-10 py-1 sm:py-3 relative z-10">
               <h3 className={cn(
-                "font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 leading-tight",
-                scrap.title.length > 40 ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+                "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-2 sm:mb-3 leading-tight tracking-tight",
+                scrap.title.length > 40 ? "text-sm sm:text-lg" : "text-base sm:text-xl"
               )}>
-                <TruncatedTitle title={scrap.title} limit={45} />
+                <TruncatedTitle title={scrap.title} limit={window.innerWidth < 640 ? 30 : 45} />
               </h3>
 
               {/* Tags */}
               {scrap.tags && scrap.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
+                <div className="flex flex-wrap gap-1.5 mb-4">
                   {scrap.tags.slice(0, 3).map(tag => (
                     <span 
                       key={tag}
-                      className="px-1.5 py-0.5 bg-white/50 text-gray-500 text-[8px] sm:text-[9px] font-bold rounded-md border border-gray-100"
+                      className="px-2 py-0.5 bg-white/80 text-gray-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-lg border border-gray-100 shadow-sm"
                     >
                       #{tag}
                     </span>
                   ))}
                   {scrap.tags.length > 3 && (
-                    <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold">
+                    <span className="text-[9px] sm:text-[10px] text-gray-400 font-black">
                       +{scrap.tags.length - 3}
                     </span>
                   )}
                 </div>
               )}
               
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
                 {/* Author Info */}
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectUser(scrap.authorId);
                   }}
-                  className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-2.5 hover:text-blue-600 transition-all group/author"
                 >
                   {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
-                    <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-sm" referrerPolicy="no-referrer" />
+                    <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full shadow-md border-2 border-white group-hover/author:scale-110 transition-transform" referrerPolicy="no-referrer" />
                   ) : (
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
-                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-white group-hover/author:scale-110 transition-transform">
+                      <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
                     </div>
                   )}
-                  <span className="text-[10px] sm:text-xs font-bold text-gray-700">{scrap.authorName}</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-gray-700">{scrap.authorName}</span>
                 </button>
 
                 {/* Meta Info */}
-                <div className="flex items-center gap-3 text-gray-400">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-4 text-gray-400">
+                  <div className="flex items-center gap-2">
                     <div className={cn(
-                      "w-1.5 h-1.5 rounded-full",
+                      "w-2 h-2 rounded-full",
                       scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-gray-400"
                     )} />
                     <span className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider",
+                      "text-[10px] font-black uppercase tracking-widest",
                       scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
                     )}>
                       {scrap.status === 'open' ? 'Open' : 'Closed'}
                     </span>
                   </div>
 
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                    <Clock className="w-3 h-3" />
                     {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
                   </span>
                   
