@@ -41,6 +41,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [images, setImages] = useState<Record<string, string>>({});
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -171,39 +172,20 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (isMentioning) {
+    if (isMentioning && !isComposing) {
       if (e.key === 'Escape') {
         setIsMentioning(false);
         return;
       }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter') {
-        // We'll let MentionDropdown handle these via its window listener
-        // But we must prevent default here to stop textarea from processing them
-        e.preventDefault();
-        return;
-      }
-    }
-
-    if (e.key === '@') {
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const pos = textarea.selectionStart;
-        const before = content.substring(0, pos);
-        if (pos === 0 || /\s$/.test(before)) {
-          const coords = getCaretCoordinates(textarea, pos);
-          const rect = textarea.getBoundingClientRect();
-          setMentionPosition({
-            top: rect.top + coords.top - textarea.scrollTop,
-            left: rect.left + coords.left - textarea.scrollLeft
-          });
-          setMentionStartIndex(pos);
-          setIsMentioning(true);
-          setMentionQuery('');
+        if (scrapsCount > 0) {
+          e.preventDefault();
+          return;
         }
       }
     }
 
-    if ((e.metaKey || e.ctrlKey)) {
+    if (!isComposing && (e.metaKey || e.ctrlKey)) {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleSubmit(e as any);
@@ -222,12 +204,11 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
+    const textarea = e.target;
+    const pos = textarea.selectionStart;
     setContent(newContent);
 
     if (isMentioning) {
-      const textarea = e.target;
-      const pos = textarea.selectionStart;
-      
       if (pos <= mentionStartIndex) {
         setIsMentioning(false);
         return;
@@ -241,8 +222,27 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
       } else {
         setMentionQuery(queryText);
       }
+    } else if (!isComposing) {
+      // Check if we should start mentioning
+      const charBefore = newContent.substring(pos - 1, pos);
+      if (charBefore === '@' || charBefore === '＠') {
+        const before = newContent.substring(0, pos - 1);
+        if (pos === 1 || /\s$/.test(before)) {
+          const coords = getCaretCoordinates(textarea, pos);
+          const rect = textarea.getBoundingClientRect();
+          setMentionPosition({
+            top: rect.top + coords.top - textarea.scrollTop,
+            left: rect.left + coords.left - textarea.scrollLeft
+          });
+          setMentionStartIndex(pos - 1);
+          setIsMentioning(true);
+          setMentionQuery('');
+        }
+      }
     }
   };
+
+  const [scrapsCount, setScrapsCount] = useState(0);
 
   const insertMention = (scrap: Scrap) => {
     const textarea = textareaRef.current;
@@ -390,6 +390,29 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
                 value={content}
                 onChange={handleContentChange}
                 onKeyDown={handleKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={(e) => {
+                  setIsComposing(false);
+                  // Trigger mention check after composition ends
+                  const textarea = e.currentTarget;
+                  const pos = textarea.selectionStart;
+                  const newContent = textarea.value;
+                  const charBefore = newContent.substring(pos - 1, pos);
+                  if (charBefore === '@' || charBefore === '＠') {
+                    const before = newContent.substring(0, pos - 1);
+                    if (pos === 1 || /\s$/.test(before)) {
+                      const coords = getCaretCoordinates(textarea, pos);
+                      const rect = textarea.getBoundingClientRect();
+                      setMentionPosition({
+                        top: rect.top + coords.top - textarea.scrollTop,
+                        left: rect.left + coords.left - textarea.scrollLeft
+                      });
+                      setMentionStartIndex(pos - 1);
+                      setIsMentioning(true);
+                      setMentionQuery('');
+                    }
+                  }
+                }}
                 placeholder={parentId ? "返信を入力..." : "コメントを入力... (Markdown対応)"}
                 minRows={parentId ? 4 : 8}
                 maxRows={20}
@@ -469,6 +492,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
           position={mentionPosition}
           onSelect={insertMention}
           onClose={() => setIsMentioning(false)}
+          onScrapsCountChange={setScrapsCount}
         />
       )}
     </div>

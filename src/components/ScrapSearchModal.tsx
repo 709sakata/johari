@@ -28,28 +28,62 @@ export function ScrapSearchModal({ isOpen, onClose, onSelect }: ScrapSearchModal
     const fetchScraps = async () => {
       setIsLoading(true);
       try {
-        const q = searchTerm.trim() 
-          ? query(
-              collection(db, 'scraps'), 
-              orderBy('updatedAt', 'desc'),
-              limit(20)
-            )
-          : query(
-              collection(db, 'scraps'), 
-              orderBy('updatedAt', 'desc'), 
-              limit(10)
-            );
-        
-        const snapshot = await getDocs(q);
-        let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
-        
-        // Client-side filtering for search term (since Firestore doesn't support full-text search easily)
-        if (searchTerm.trim()) {
-          const term = searchTerm.toLowerCase();
-          results = results.filter(s => 
-            s.title.toLowerCase().includes(term) || 
-            s.tags?.some(t => t.toLowerCase().includes(term))
+        let results: Scrap[] = [];
+        const term = searchTerm.trim();
+
+        if (term) {
+          const lowerTerm = term.toLowerCase();
+          
+          // 1. Fetch recent 500 for substring matching
+          const recentQ = query(
+            collection(db, 'scraps'), 
+            orderBy('updatedAt', 'desc'), 
+            limit(500)
           );
+          
+          // 2. Fetch prefix matches for older threads
+          const prefixQ = query(
+            collection(db, 'scraps'),
+            where('title', '>=', term),
+            where('title', '<=', term + '\uf8ff'),
+            limit(50)
+          );
+
+          const [recentSnap, prefixSnap] = await Promise.all([
+            getDocs(recentQ),
+            getDocs(prefixQ)
+          ]);
+
+          const recentResults = recentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+          const prefixResults = prefixSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+
+          // Combine and filter
+          const combined = [...recentResults, ...prefixResults];
+          const uniqueMap = new Map();
+          combined.forEach(s => uniqueMap.set(s.id, s));
+          
+          results = Array.from(uniqueMap.values());
+          
+          // Apply substring filter
+          results = results.filter(s => 
+            s.title.toLowerCase().includes(lowerTerm) || 
+            s.tags?.some(t => t.toLowerCase().includes(lowerTerm))
+          );
+          
+          // Sort by updatedAt
+          results.sort((a, b) => {
+            const tA = a.updatedAt?.toMillis() || 0;
+            const tB = b.updatedAt?.toMillis() || 0;
+            return tB - tA;
+          });
+        } else {
+          const q = query(
+            collection(db, 'scraps'), 
+            orderBy('updatedAt', 'desc'), 
+            limit(10)
+          );
+          const snapshot = await getDocs(q);
+          results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
         }
         
         setScraps(results);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, limit, getDocs } from '../firebase';
+import { db, collection, query, orderBy, limit, getDocs, where } from '../firebase';
 import { Scrap } from '../types';
 import { Loader2, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,9 +10,10 @@ interface MentionDropdownProps {
   onSelect: (scrap: Scrap) => void;
   onClose: () => void;
   position: { top: number; left: number };
+  onScrapsCountChange?: (count: number) => void;
 }
 
-export function MentionDropdown({ searchTerm, onSelect, onClose, position }: MentionDropdownProps) {
+export function MentionDropdown({ searchTerm, onSelect, onClose, position, onScrapsCountChange }: MentionDropdownProps) {
   const [scraps, setScraps] = useState<Scrap[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -20,26 +21,78 @@ export function MentionDropdown({ searchTerm, onSelect, onClose, position }: Men
 
   useEffect(() => {
     const fetchScraps = async () => {
+      if (!searchTerm.trim()) {
+        setIsLoading(true);
+        try {
+          const q = query(
+            collection(db, 'scraps'), 
+            orderBy('updatedAt', 'desc'), 
+            limit(20)
+          );
+          const snapshot = await getDocs(q);
+          const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+          setScraps(results);
+          onScrapsCountChange?.(results.length);
+          setSelectedIndex(0);
+        } catch (error) {
+          console.error('Error fetching recent scraps:', error);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const q = query(
+        const term = searchTerm.trim();
+        const lowerTerm = term.toLowerCase();
+
+        // 1. Fetch recent 500 for substring matching
+        const recentQ = query(
           collection(db, 'scraps'), 
           orderBy('updatedAt', 'desc'), 
-          limit(20)
+          limit(500)
         );
         
-        const snapshot = await getDocs(q);
-        let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+        // 2. Fetch prefix matches for older threads (Firestore native prefix search)
+        const prefixQ = query(
+          collection(db, 'scraps'),
+          where('title', '>=', term),
+          where('title', '<=', term + '\uf8ff'),
+          limit(50)
+        );
+
+        const [recentSnap, prefixSnap] = await Promise.all([
+          getDocs(recentQ),
+          getDocs(prefixQ)
+        ]);
+
+        const recentResults = recentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+        const prefixResults = prefixSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+
+        // Combine and filter
+        const combined = [...recentResults, ...prefixResults];
+        const uniqueMap = new Map();
+        combined.forEach(s => uniqueMap.set(s.id, s));
         
-        if (searchTerm.trim()) {
-          const term = searchTerm.toLowerCase();
-          results = results.filter(s => 
-            s.title.toLowerCase().includes(term) || 
-            s.tags?.some(t => t.toLowerCase().includes(term))
-          );
-        }
+        let results = Array.from(uniqueMap.values());
         
-        setScraps(results.slice(0, 8));
+        // Apply substring filter
+        results = results.filter(s => 
+          s.title.toLowerCase().includes(lowerTerm) || 
+          s.tags?.some(t => t.toLowerCase().includes(lowerTerm))
+        );
+        
+        // Sort by updatedAt for the final list
+        results.sort((a, b) => {
+          const tA = a.updatedAt?.toMillis() || 0;
+          const tB = b.updatedAt?.toMillis() || 0;
+          return tB - tA;
+        });
+
+        const finalResults = results.slice(0, 8);
+        setScraps(finalResults);
+        onScrapsCountChange?.(finalResults.length);
         setSelectedIndex(0);
       } catch (error) {
         console.error('Error searching scraps for mention:', error);
@@ -54,6 +107,8 @@ export function MentionDropdown({ searchTerm, onSelect, onClose, position }: Men
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setSelectedIndex(prev => (prev + 1) % scraps.length);
