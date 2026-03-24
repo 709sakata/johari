@@ -118,16 +118,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Detect embed mode immediately
+    const params = new URLSearchParams(window.location.search);
+    const embed = params.get('embed') === 'true' || window.self !== window.top;
+    setIsEmbed(embed);
+
+    // Safety timeout for auth initialization
+    const timeout = setTimeout(() => {
+      if (!isAuthReady) {
+        console.warn('Auth initialization timed out, proceeding anyway...');
+        setIsAuthReady(true);
+      }
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setIsAuthReady(true);
+      clearTimeout(timeout);
 
       // Handle query params or path for direct access
       const params = new URLSearchParams(window.location.search);
       let scrapId = params.get('scrapId');
       let userId = params.get('userId');
-      const embed = params.get('embed') === 'true';
-      setIsEmbed(embed);
       
       // Also check path-based URL (/scraps/:id or /users/:id or /qa/:id)
       const path = window.location.pathname;

@@ -397,19 +397,27 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
                   const textarea = e.currentTarget;
                   const pos = textarea.selectionStart;
                   const newContent = textarea.value;
-                  const charBefore = newContent.substring(pos - 1, pos);
-                  if (charBefore === '@' || charBefore === '＠') {
-                    const before = newContent.substring(0, pos - 1);
-                    if (pos === 1 || /\s$/.test(before)) {
-                      const coords = getCaretCoordinates(textarea, pos);
+                  
+                  // Look back for the nearest @ or ＠ to start mentioning
+                  // We look back up to 20 characters to find a potential mention start
+                  const lookback = newContent.substring(Math.max(0, pos - 20), pos);
+                  const lastAt = Math.max(lookback.lastIndexOf('@'), lookback.lastIndexOf('＠'));
+                  
+                  if (lastAt !== -1) {
+                    const absoluteAtPos = Math.max(0, pos - 20) + lastAt;
+                    const beforeAt = newContent.substring(0, absoluteAtPos);
+                    
+                    // Ensure it's at the start or preceded by whitespace
+                    if (absoluteAtPos === 0 || /\s$/.test(beforeAt)) {
+                      const coords = getCaretCoordinates(textarea, absoluteAtPos + 1);
                       const rect = textarea.getBoundingClientRect();
                       setMentionPosition({
                         top: rect.top + coords.top - textarea.scrollTop,
                         left: rect.left + coords.left - textarea.scrollLeft
                       });
-                      setMentionStartIndex(pos - 1);
+                      setMentionStartIndex(absoluteAtPos);
                       setIsMentioning(true);
-                      setMentionQuery('');
+                      setMentionQuery(newContent.substring(absoluteAtPos + 1, pos));
                     }
                   }
                 }}
