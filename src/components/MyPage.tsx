@@ -299,7 +299,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
               <div className="space-y-3 sm:space-y-6 w-full">
                 <div className="space-y-1.5 sm:space-y-3">
                   <div className="flex flex-row items-center gap-2 sm:gap-3">
-                    <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight truncate">
+                    <h2 className="text-lg sm:text-3xl font-black text-gray-900 tracking-tight truncate">
                       {profile?.displayName || authUser.displayName || 'ユーザー'}
                     </h2>
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">

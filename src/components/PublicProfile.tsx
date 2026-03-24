@@ -141,7 +141,7 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
           {/* Info Area */}
           <div className="flex-1 flex flex-col items-center text-center md:items-start md:text-left gap-6 min-w-0">
             <div className="space-y-3 w-full">
-              <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+              <h2 className="text-lg sm:text-3xl font-black text-gray-900 tracking-tight">
                 {userProfile.displayName || 'Anonymous'}
               </h2>
               {userProfile.bio ? (
