@@ -166,7 +166,8 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
   const getPreviewContent = () => {
     let preview = content;
     Object.entries(images).forEach(([id, base64]) => {
-      preview = preview.split(`(${id})`).join(`(${base64})`);
+      // Ensure we replace both the markdown syntax and any other occurrences
+      preview = preview.split(id).join(base64);
     });
     return preview;
   };

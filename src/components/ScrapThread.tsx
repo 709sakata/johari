@@ -1074,7 +1074,8 @@ function CommentItem({
     let content = comment.content;
     if (comment.images) {
       Object.entries(comment.images).forEach(([id, base64]) => {
-        content = content.split(`(${id})`).join(`(${base64})`);
+        // Ensure we replace both the markdown syntax and any other occurrences
+        content = content.split(id).join(base64);
       });
     }
     return content;

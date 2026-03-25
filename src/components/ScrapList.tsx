@@ -93,25 +93,25 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             onClick={() => onSelectScrap(scrap)}
-            className="group relative w-full p-3.5 sm:p-4 bg-white/60 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2.5rem] transition-all cursor-pointer overflow-hidden flex items-center gap-4 sm:gap-8 border border-white/40 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-100 hover:-translate-y-1.5"
+            className="group relative w-full p-3 sm:p-4 bg-white/60 backdrop-blur-sm rounded-[1.25rem] sm:rounded-[2.5rem] transition-all cursor-pointer overflow-hidden flex items-center gap-3 sm:gap-8 border border-white/40 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-100 hover:-translate-y-1.5"
           >
             {/* Glass reflection effect */}
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
             
             {/* Left Side: Emoji Block (Rounded Rectangle) */}
-            <div className="w-16 h-16 sm:w-32 sm:h-32 bg-slate-50 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 group-hover:bg-blue-50 shadow-inner">
-              <span className="text-3xl sm:text-5xl select-none filter drop-shadow-sm transition-transform group-hover:rotate-12">
+            <div className="w-14 h-14 sm:w-32 sm:h-32 bg-slate-50 rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 group-hover:bg-blue-50 shadow-inner">
+              <span className="text-2xl sm:text-5xl select-none filter drop-shadow-sm transition-transform group-hover:rotate-12">
                 {scrap.icon_emoji || '📄'}
               </span>
             </div>
 
             {/* Right Side: Content */}
-            <div className="flex-1 min-w-0 pr-2 sm:pr-10 py-1 sm:py-3 relative z-10">
+            <div className="flex-1 min-w-0 pr-1 sm:pr-10 py-0.5 sm:py-3 relative z-10">
               <h3 className={cn(
-                "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-2 sm:mb-3 leading-tight tracking-tight",
-                scrap.title.length > 40 ? "text-sm sm:text-lg" : "text-base sm:text-xl"
+                "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 sm:mb-3 leading-tight tracking-tight",
+                scrap.title.length > 40 ? "text-xs sm:text-lg" : "text-sm sm:text-xl"
               )}>
-                <TruncatedTitle title={scrap.title} limit={window.innerWidth < 640 ? 30 : 45} />
+                <TruncatedTitle title={scrap.title} limit={window.innerWidth < 640 ? 25 : 45} />
               </h3>
 
               {/* Tags */}
