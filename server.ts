@@ -13,6 +13,18 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper for Firestore timeouts
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(`Firestore operation timed out after ${ms}ms`);
+      resolve(fallback);
+    }, ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+}
+
 const app = express();
 const parser = new Parser();
 
@@ -72,8 +84,8 @@ async function injectSEO(html: string, req: express.Request): Promise<string> {
   if (scrapMatch && db) {
     const scrapId = scrapMatch[1];
     try {
-      const scrapDoc = await getDoc(doc(db, "scraps", scrapId));
-      if (scrapDoc.exists()) {
+      const scrapDoc = await withTimeout(getDoc(doc(db, "scraps", scrapId)), 3000, null as any);
+      if (scrapDoc && scrapDoc.exists()) {
         const data = scrapDoc.data();
         title = `${data.title} | じょはり`;
         
@@ -84,7 +96,7 @@ async function injectSEO(html: string, req: express.Request): Promise<string> {
           orderBy("createdAt", "asc"),
           limit(5)
         );
-        const commentsSnapshot = await getDocs(commentsQ);
+        const commentsSnapshot = await withTimeout(getDocs(commentsQ), 2000, { docs: [] } as any);
         for (const commentDoc of commentsSnapshot.docs) {
           const rawContent = commentDoc.data().content || "";
           const cleanContent = rawContent.replace(/[#*_\-~\[\]\(\)>]/g, "").replace(/\s+/g, " ").trim();
@@ -121,8 +133,8 @@ async function injectSEO(html: string, req: express.Request): Promise<string> {
   } else if (userMatch && db) {
     const userId = userMatch[1];
     try {
-      const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists()) {
+      const userDoc = await withTimeout(getDoc(doc(db, "users", userId)), 3000, null as any);
+      if (userDoc && userDoc.exists()) {
         const data = userDoc.data();
         title = `${data.displayName || "ユーザー"} のプロフィール | じょはり`;
         description = data.bio || `${data.displayName || "ユーザー"} さんの思考の窓。じょはり で思考を整理し、対話を楽しんでいます。`;

@@ -97,8 +97,12 @@ export default function App() {
         const scrapId = path.split('/scraps/')[1];
         if (scrapId) {
           try {
-            const scrapDoc = await getDoc(doc(db, 'scraps', scrapId));
-            if (scrapDoc.exists()) {
+            // Add a timeout for client-side fetch
+            const scrapDocPromise = getDoc(doc(db, 'scraps', scrapId));
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
+            const scrapDoc = await Promise.race([scrapDocPromise, timeoutPromise]) as any;
+            
+            if (scrapDoc && scrapDoc.exists()) {
               setSelectedScrap({ id: scrapDoc.id, ...scrapDoc.data() } as Scrap);
               setActiveTab('scraps');
             }
@@ -176,8 +180,12 @@ export default function App() {
 
       if (scrapId && !selectedScrap) {
         try {
-          const scrapDoc = await getDoc(doc(db, 'scraps', scrapId));
-          if (scrapDoc.exists()) {
+          // Add a timeout for client-side fetch
+          const scrapDocPromise = getDoc(doc(db, 'scraps', scrapId));
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
+          const scrapDoc = await Promise.race([scrapDocPromise, timeoutPromise]) as any;
+          
+          if (scrapDoc && scrapDoc.exists()) {
             setSelectedScrap({ id: scrapDoc.id, ...scrapDoc.data() } as Scrap);
             setActiveTab('scraps');
           }
@@ -204,9 +212,28 @@ export default function App() {
 
   if (!isAuthReady) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-        <p className="text-gray-500 font-black tracking-widest uppercase text-[10px]">思考の窓を開いています...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-50 rounded-full blur-3xl opacity-50 animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-50 rounded-full blur-3xl opacity-50 animate-pulse" style={{ animationDelay: '1s' }} />
+        
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-200 animate-bounce">
+            <MessageSquare className="w-10 h-10 text-white" />
+          </div>
+          
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+              <h1 className="text-2xl font-black tracking-tight text-gray-900">
+                じょはり<span className="text-blue-600">.</span>
+              </h1>
+            </div>
+            <p className="text-gray-400 font-black tracking-[0.2em] uppercase text-[10px] animate-pulse">
+              思考の窓を開いています
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
