@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { db, doc, getDoc as getDocClient } from '../../../firebase';
-import { Scrap } from '../../../types';
+import { db, doc, getDoc as getDocClient, collection, query, orderBy, limit, getDocs } from '../../../firebase';
+import { Scrap, Comment } from '../../../types';
 import { ScrapThread } from '../../../components/ScrapThread';
 import { Header } from '../../../components/Header';
 import { Footer } from '../../../components/Footer';
@@ -30,7 +30,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const title = `${data.title} | じょはり`;
-    const description = `新しいスレッド「${data.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`;
+    
+    // Fetch the first comment to use as description
+    let firstCommentContent = '';
+    try {
+      const commentsQuery = query(
+        collection(db, 'scraps', id, 'comments'),
+        orderBy('createdAt', 'asc'),
+        limit(1)
+      );
+      const commentsSnapshot = await getDocs(commentsQuery);
+      if (!commentsSnapshot.empty) {
+        firstCommentContent = (commentsSnapshot.docs[0].data() as Comment).content;
+      }
+    } catch (e) {
+      console.error('Error fetching first comment for metadata:', e);
+    }
+
+    const description = firstCommentContent 
+      ? firstCommentContent.substring(0, 160).replace(/[#*`]/g, '').trim() + '...'
+      : `新しいスレッド「${data.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`;
     
     const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
     const ogImage = `${host}/api/og-image/${id}`;
@@ -38,6 +57,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title,
       description,
+      keywords: [...(data.tags || []), 'じょはり', '思考整理'],
       alternates: {
         canonical: `/scraps/${id}`,
       },
@@ -67,10 +87,22 @@ export default async function ScrapPage({ params }: PageProps) {
 
   // Fetch data for JSON-LD
   let scrapData: Scrap | null = null;
+  let firstComment: Comment | null = null;
   try {
     const scrapDoc = await getDocClient(doc(db, 'scraps', id));
     if (scrapDoc.exists()) {
       scrapData = scrapDoc.data() as Scrap;
+      
+      // Fetch first comment for JSON-LD body
+      const commentsQuery = query(
+        collection(db, 'scraps', id, 'comments'),
+        orderBy('createdAt', 'asc'),
+        limit(1)
+      );
+      const commentsSnapshot = await getDocs(commentsQuery);
+      if (!commentsSnapshot.empty) {
+        firstComment = commentsSnapshot.docs[0].data() as Comment;
+      }
     }
   } catch (e) {
     console.error('Error fetching scrap for JSON-LD:', e);
@@ -82,14 +114,17 @@ export default async function ScrapPage({ params }: PageProps) {
     '@context': 'https://schema.org',
     '@type': 'DiscussionForumPosting',
     'headline': scrapData.title,
-    'description': `新しいスレッド「${scrapData.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`,
+    'description': firstComment?.content.substring(0, 200).replace(/[#*`]/g, '').trim() || `新しいスレッド「${scrapData.title}」が作成されました。`,
+    'articleBody': firstComment?.content || '',
     'author': {
       '@type': 'Person',
       'name': scrapData.authorName,
+      'url': `${host}/profile/${scrapData.authorId}`
     },
     'datePublished': scrapData.createdAt?.toDate().toISOString(),
     'dateModified': scrapData.updatedAt?.toDate().toISOString(),
     'url': `${host}/scraps/${id}`,
+    'image': `${host}/api/og-image/${id}`,
     'interactionStatistic': {
       '@type': 'InteractionCounter',
       'interactionType': 'https://schema.org/CommentAction',
