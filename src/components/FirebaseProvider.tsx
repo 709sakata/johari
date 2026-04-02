@@ -71,7 +71,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.warn = originalWarn;
       console.error = originalError;
     };
-  }, []); // Run only once on mount
+  }, [isAuthReady]); // Run once on mount, but include isAuthReady for linting
 
   if (!isAuthReady) {
     return (

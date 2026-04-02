@@ -1,9 +1,12 @@
+'use client';
+
 import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc, collectionGroup, where, limit } from '../firebase';
 import { useCollection, useDocument } from 'react-firebase-hooks/firestore';
 import { Scrap, Comment, OperationType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import TextareaAutosize from 'react-textarea-autosize';
+import Image from 'next/image';
 import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy, Hash } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -19,13 +22,15 @@ import { Auth } from './Auth';
 import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
 import { cn } from '../lib/utils';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkPreview } from './LinkPreview';
 import { ScrapMention } from './ScrapMention';
 import { toast } from 'sonner';
 import { DIVERSE_EMOJIS } from '../constants/emojis';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+import { parseScrapboxLinks } from '../lib/scrapbox';
+import { ScrapLink } from './ScrapLink';
 
 function BacklinkCard({ scrapId, commentContent, onSelectScrap }: { scrapId: string, commentContent: string, onSelectScrap?: (scrap: Scrap) => void }) {
   const [scrapValue] = useDocument(doc(db, 'scraps', scrapId));
@@ -79,7 +84,15 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors" />
           {authorPhoto && authorPhoto !== "" ? (
-            <img src={authorPhoto} alt={authorName} className="relative w-24 h-24 rounded-full border-4 border-white shadow-2xl group-hover:scale-105 transition-all duration-500 ease-out" referrerPolicy="no-referrer" />
+            <div className="relative w-24 h-24 mb-6">
+              <Image 
+                src={authorPhoto} 
+                alt={authorName} 
+                fill
+                className="rounded-full border-4 border-white shadow-2xl group-hover:scale-105 transition-all duration-500 ease-out object-cover" 
+                referrerPolicy="no-referrer" 
+              />
+            </div>
           ) : (
             <div className="relative w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-2xl group-hover:scale-105 transition-all duration-500 ease-out">
               <User className="w-12 h-12 text-gray-300" />
@@ -106,9 +119,6 @@ function BioDisplay({ userId, className }: { userId: string, className?: string 
   if (!bio) return null;
   return <ExpandableBio bio={bio} className={className} />;
 }
-
-import { parseScrapboxLinks } from '../lib/scrapbox';
-import { ScrapLink } from './ScrapLink';
 
 export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelectScrap, onCreateScrap }: ScrapThreadProps) {
   const [scrapValue, scrapLoading, scrapError] = useDocument(doc(db, `scraps/${initialScrap.id}`));
@@ -143,7 +153,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   const menuRef = useRef<HTMLDivElement>(null);
 
   const scrap = scrapValue?.exists() ? ({ id: scrapValue.id, ...scrapValue.data() } as Scrap) : initialScrap;
-  const allComments = commentsValue?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)) || [];
+  const allComments = useMemo(() => commentsValue?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)) || [], [commentsValue]);
   
   // SEO description from comments
   const seoDescription = allComments.slice(0, 5).map(c => c.content.replace(/[#*_\-~\[\]\(\)>]/g, "").replace(/\s+/g, " ").trim()).join(" ").substring(0, 160);
@@ -454,22 +464,24 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6 transition-colors group"
-        >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium hidden sm:inline">一覧に戻る</span>
-        </button>
-      </div>
+    <article className="max-w-6xl mx-auto pb-20">
+      <nav className="mb-6" aria-label="パンくずリスト">
+        <ol className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">
+          <li>
+            <button onClick={onBack} className="hover:text-blue-600 transition-colors">ホーム</button>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="opacity-30">/</span>
+            <span className="text-gray-900 truncate max-w-[150px] sm:max-w-[300px]">{scrap.title}</span>
+          </li>
+        </ol>
+      </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-stretch">
         {/* Main Content */}
         <div className="space-y-6 min-w-0">
           {/* Mobile Sidebar Content */}
-          <div className="lg:hidden space-y-4">
+          <aside className="lg:hidden space-y-4">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-4 space-y-4">
                 {isAuthor && (
@@ -481,6 +493,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                         ? "bg-gray-900 text-white hover:bg-gray-800"
                         : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100"
                     }`}
+                    aria-label={scrap.status === 'open' ? 'スレッドを閉じる' : 'スレッドを再開する'}
                   >
                     {scrap.status === 'open' ? (
                       <>
@@ -504,10 +517,10 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 />
               </div>
             </div>
-          </div>
+          </aside>
 
-          <div className="glass p-6 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10">
-            <div className="mb-8 sm:mb-10">
+          <section className="glass p-6 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10">
+            <header className="mb-8 sm:mb-10">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <span className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] rounded-full border ${
@@ -517,10 +530,10 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   }`}>
                     {scrap.status === 'open' ? 'オープン' : 'クローズ'}
                   </span>
-                  <span className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                  <time className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5" dateTime={scrap.createdAt?.toDate().toISOString()}>
                     <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     {scrap.createdAt ? formatDistanceToNow(scrap.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
-                  </span>
+                  </time>
                   <span className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     {scrap.commentCount ?? 0}
@@ -766,7 +779,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   </>
                 )}
               </div>
-            </div>
+            </header>
 
             <div className="flex items-center gap-4 pt-8 border-t border-gray-50">
               <div 
@@ -781,7 +794,15 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 className="flex items-center gap-4 group/author w-full max-w-full min-w-0 cursor-pointer focus:outline-none"
               >
                 {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
-                  <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-12 h-12 rounded-full border-2 border-white shadow-md group-hover:scale-110 transition-all" referrerPolicy="no-referrer" />
+                  <div className="relative w-12 h-12">
+                    <Image 
+                      src={scrap.authorPhoto} 
+                      alt={scrap.authorName} 
+                      fill
+                      className="rounded-full border-2 border-white shadow-md group-hover:scale-110 transition-all object-cover" 
+                      referrerPolicy="no-referrer" 
+                    />
+                  </div>
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-all shadow-md border-2 border-white">
                     <User className="w-6 h-6 text-gray-400" />
@@ -793,7 +814,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
           {loading ? (
             <div className="flex justify-center py-12">
@@ -1097,7 +1118,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
           </motion.button>
         )}
       </AnimatePresence>
-    </div>
+    </article>
   );
 }
 
@@ -1198,7 +1219,15 @@ function CommentItem({
           >
             <div className="relative">
               {comment.authorPhoto && comment.authorPhoto !== "" ? (
-                <img src={comment.authorPhoto} alt={comment.authorName} className="w-10 h-10 rounded-full border-2 border-white shadow-md group-hover/author:scale-110 transition-all" referrerPolicy="no-referrer" />
+                <div className="relative w-10 h-10">
+                  <Image 
+                    src={comment.authorPhoto} 
+                    alt={comment.authorName} 
+                    fill
+                    className="rounded-full border-2 border-white shadow-md group-hover/author:scale-110 transition-all object-cover" 
+                    referrerPolicy="no-referrer" 
+                  />
+                </div>
               ) : (
                 <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md border-2 border-white group-hover/author:scale-110 transition-all">
                   <User className="w-5 h-5 text-gray-400" />
@@ -1302,14 +1331,18 @@ function CommentItem({
                 img: ({ node, ...props }) => {
                   if (!props.src || props.src === "") return null;
                   return (
-                    <img 
-                      {...props} 
-                      className="max-h-64 sm:max-h-96 rounded-2xl shadow-xl cursor-zoom-in hover:opacity-95 transition-all hover:scale-[1.02] my-6" 
-                      onClick={() => {
-                        setEnlargedImageUrl((props.src as string) || null);
-                        setIsEnlarged(true);
-                      }}
-                    />
+                    <div className="relative w-full h-64 sm:h-96 my-6">
+                      <Image 
+                        src={props.src} 
+                        alt={(props.alt as string) || ''}
+                        fill
+                        className="rounded-2xl shadow-xl cursor-zoom-in hover:opacity-95 transition-all hover:scale-[1.02] object-contain" 
+                        onClick={() => {
+                          setEnlargedImageUrl((props.src as string) || null);
+                          setIsEnlarged(true);
+                        }}
+                      />
+                    </div>
                   );
                 },
                 a: ({ node, ...props }) => {
@@ -1427,14 +1460,19 @@ function CommentItem({
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md cursor-zoom-out"
             onClick={() => setIsEnlarged(false)}
           >
-            <motion.img
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              src={enlargedImageUrl}
-              alt="Enlarged"
-              className="max-w-full max-h-full rounded-lg shadow-2xl"
-            />
+              className="relative max-w-full max-h-full aspect-video w-full h-full"
+            >
+              <Image
+                src={enlargedImageUrl}
+                alt="Enlarged"
+                fill
+                className="rounded-lg shadow-2xl object-contain"
+              />
+            </motion.div>
             <button
               onClick={() => setIsEnlarged(false)}
               className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"

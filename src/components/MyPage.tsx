@@ -6,6 +6,7 @@ import { Scrap, User as UserProfile, UserLink } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommentCount } from './CommentCount';
@@ -286,12 +287,15 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
           {/* Avatar Area */}
           <div className="relative group/avatar flex-shrink-0">
             {authUser.photoURL ? (
-              <img 
-                src={authUser.photoURL} 
-                alt={authUser.displayName || ''} 
-                className="w-20 h-20 sm:w-40 sm:h-40 rounded-[1.5rem] sm:rounded-[3rem] shadow-2xl border-4 border-white object-cover transition-all duration-500 group-hover/avatar:scale-105 group-hover/avatar:rotate-3" 
-                referrerPolicy="no-referrer" 
-              />
+              <div className="relative w-20 h-20 sm:w-40 sm:h-40">
+                <Image 
+                  src={authUser.photoURL} 
+                  alt={authUser.displayName || ''} 
+                  fill
+                  className="rounded-[1.5rem] sm:rounded-[3rem] shadow-2xl border-4 border-white object-cover transition-all duration-500 group-hover/avatar:scale-105 group-hover/avatar:rotate-3" 
+                  referrerPolicy="no-referrer" 
+                />
+              </div>
             ) : (
               <div className="w-20 h-20 sm:w-40 sm:h-40 rounded-[1.5rem] sm:rounded-[3rem] bg-white/50 backdrop-blur-sm flex items-center justify-center border-4 border-white shadow-xl">
                 <User className="w-10 h-10 sm:w-20 sm:h-20 text-gray-300" />

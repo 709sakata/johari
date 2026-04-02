@@ -103,7 +103,7 @@ export function MentionDropdown({ searchTerm, onSelect, onClose, position, onScr
 
     const debounce = setTimeout(fetchScraps, 150);
     return () => clearTimeout(debounce);
-  }, [searchTerm]);
+  }, [searchTerm, onScrapsCountChange]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -5,6 +5,7 @@ import { Scrap } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { MessageSquare, Clock, User, Loader2, LayoutGrid, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { DIVERSE_EMOJIS } from '../constants/emojis';
@@ -143,7 +144,15 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
                   className="flex items-center gap-2.5 hover:text-blue-600 transition-all group/author"
                 >
                   {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
-                    <img src={scrap.authorPhoto} alt={scrap.authorName} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full shadow-md border-2 border-white group-hover/author:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                    <div className="relative w-6 h-6 sm:w-7 sm:h-7">
+                      <Image 
+                        src={scrap.authorPhoto} 
+                        alt={scrap.authorName} 
+                        fill
+                        className="rounded-full shadow-md border-2 border-white group-hover/author:scale-110 transition-transform object-cover" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    </div>
                   ) : (
                     <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-white group-hover/author:scale-110 transition-transform">
                       <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />

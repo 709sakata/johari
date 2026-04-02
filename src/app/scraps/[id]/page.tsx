@@ -38,6 +38,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title,
       description,
+      alternates: {
+        canonical: `/scraps/${id}`,
+      },
       openGraph: {
         title,
         description,
@@ -62,10 +65,69 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ScrapPage({ params }: PageProps) {
   const { id } = await params;
 
-  // We pass the ID to the client component which will handle real-time updates via onSnapshot
-  // This keeps the interactive parts working as they were in the SPA
+  // Fetch data for JSON-LD
+  let scrapData: Scrap | null = null;
+  try {
+    const scrapDoc = await getDocClient(doc(db, 'scraps', id));
+    if (scrapDoc.exists()) {
+      scrapData = scrapDoc.data() as Scrap;
+    }
+  } catch (e) {
+    console.error('Error fetching scrap for JSON-LD:', e);
+  }
+
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  
+  const jsonLd = scrapData ? {
+    '@context': 'https://schema.org',
+    '@type': 'DiscussionForumPosting',
+    'headline': scrapData.title,
+    'description': `新しいスレッド「${scrapData.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`,
+    'author': {
+      '@type': 'Person',
+      'name': scrapData.authorName,
+    },
+    'datePublished': scrapData.createdAt?.toDate().toISOString(),
+    'dateModified': scrapData.updatedAt?.toDate().toISOString(),
+    'url': `${host}/scraps/${id}`,
+    'interactionStatistic': {
+      '@type': 'InteractionCounter',
+      'interactionType': 'https://schema.org/CommentAction',
+      'userInteractionCount': scrapData.commentCount || 0
+    }
+  } : null;
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      {
+        '@type': 'ListItem',
+        'position': 1,
+        'name': 'ホーム',
+        'item': host
+      },
+      {
+        '@type': 'ListItem',
+        'position': 2,
+        'name': scrapData?.title || 'スレッド',
+        'item': `${host}/scraps/${id}`
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <Header />
       <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
         <ScrapThreadWrapper id={id} />

@@ -1,4 +1,5 @@
 import { auth, googleProvider, signInWithPopup, signOut, db, doc, setDoc, serverTimestamp } from '../firebase';
+import Image from 'next/image';
 import { LogIn, LogOut, User as UserIcon, Edit3, Check, X, Loader2 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useDocument } from 'react-firebase-hooks/firestore';
@@ -125,12 +126,15 @@ export function Auth({ onMyPageClick }: AuthProps) {
           className="flex items-center focus:outline-none"
         >
           {user.photoURL && user.photoURL !== "" ? (
-            <img 
-              src={user.photoURL} 
-              alt={user.displayName || ''} 
-              className="w-9 h-9 rounded-full border-2 border-white shadow-sm hover:border-blue-100 transition-all" 
-              referrerPolicy="no-referrer" 
-            />
+            <div className="relative w-9 h-9">
+              <Image 
+                src={user.photoURL} 
+                alt={user.displayName || ''} 
+                fill
+                className="rounded-full border-2 border-white shadow-sm hover:border-blue-100 transition-all object-cover" 
+                referrerPolicy="no-referrer" 
+              />
+            </div>
           ) : (
             <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center border-2 border-white shadow-sm">
               <UserIcon className="w-5 h-5 text-gray-500" />

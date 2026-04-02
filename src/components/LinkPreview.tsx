@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ExternalLink, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 interface LinkPreviewData {
   title?: string;
@@ -62,11 +63,12 @@ export function LinkPreview({ url }: { url: string }) {
     >
       <div className="flex flex-col sm:flex-row">
         {displayData.image && displayData.image !== "" && (
-          <div className="sm:w-48 h-32 sm:h-auto overflow-hidden bg-gray-50 flex-shrink-0">
-            <img 
+          <div className="relative sm:w-48 h-32 sm:h-auto overflow-hidden bg-gray-50 flex-shrink-0">
+            <Image 
               src={displayData.image} 
               alt={displayTitle} 
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
               referrerPolicy="no-referrer"
             />
           </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { db, auth, collection, addDoc, serverTimestamp, doc, updateDoc, increment } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
@@ -371,11 +372,15 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
                     img: ({ node, ...props }) => {
                       if (!props.src || props.src === "") return null;
                       return (
-                        <img 
-                          {...props} 
-                          className="max-w-full h-auto rounded-xl shadow-sm my-4 border border-gray-100" 
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="relative w-full h-48 sm:h-64 my-4">
+                          <Image 
+                            src={props.src} 
+                            alt={(props.alt as string) || ''}
+                            fill
+                            className="rounded-xl shadow-sm border border-gray-100 object-contain" 
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
                       );
                     }
                   }}
