@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { db, collection, query, orderBy, doc, getDoc } from '../firebase';
 import { where } from 'firebase/firestore';
 import { useCollection } from 'react-firebase-hooks/firestore';
@@ -13,7 +12,6 @@ import { CommentCount } from './CommentCount';
 import { ExpandableBio } from './ExpandableBio';
 import { ScrapStats } from './ScrapStats';
 import { LinksDialog } from './LinksDialog';
-import { QASection } from './QASection';
 
 interface PublicProfileProps {
   userId: string;
@@ -92,33 +90,8 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
   const description = userProfile.bio || `${userProfile.displayName || "ユーザー"} さんの思考の窓。じょはり で思考を整理し、対話を楽しんでいます。`;
   const url = `${window.location.origin}/users/${userProfile.id}`;
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    "mainEntity": {
-      "@type": "Person",
-      "name": userProfile.displayName,
-      "description": userProfile.bio,
-      "image": userProfile.photoURL
-    }
-  };
-
   return (
     <div className="space-y-8">
-      <Helmet>
-        <title>{title}</title>
-        <meta name="description" content={description} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={description} />
-        <meta property="og:image" content={userProfile.photoURL || `${window.location.origin}/og-image.png`} />
-        <meta property="og:url" content={url} />
-        <meta name="twitter:title" content={title} />
-        <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={userProfile.photoURL || `${window.location.origin}/og-image.png`} />
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
-        </script>
-      </Helmet>
       {/* Profile Header */}
       <div className="glass p-5 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/5 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -187,9 +160,6 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
           </div>
         </div>
       </div>
-
-      {/* Q&A Section */}
-      {/* <QASection userId={userId} /> */}
 
       {/* Scraps Section */}
       <div className="space-y-8">

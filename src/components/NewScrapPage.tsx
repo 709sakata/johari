@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { db, auth, collection, addDoc, serverTimestamp } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
@@ -11,12 +10,13 @@ import { DIVERSE_EMOJIS } from '../constants/emojis';
 interface NewScrapPageProps {
   onClose: () => void;
   onSuccess: (scrapId: string) => void;
+  initialTitle?: string;
 }
 
 import { logActivity, ActivityType } from '../lib/analytics';
 
-export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
-  const [title, setTitle] = useState('');
+export function NewScrapPage({ onClose, onSuccess, initialTitle = '' }: NewScrapPageProps) {
+  const [title, setTitle] = useState(initialTitle);
   const [tagsInput, setTagsInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,9 +64,6 @@ export function NewScrapPage({ onClose, onSuccess }: NewScrapPageProps) {
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
-      <Helmet>
-        <title>新規スレッド | じょはり</title>
-      </Helmet>
       <button
         onClick={onClose}
         className="flex items-center gap-2 text-gray-400 hover:text-gray-900 mb-8 transition-colors group"

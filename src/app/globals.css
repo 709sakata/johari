@@ -1,16 +1,20 @@
 @import "tailwindcss";
-@import "highlight.js/styles/github-dark.css";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", sans-serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), sans-serif;
 }
 
 @layer base {
+  *, ::after, ::before {
+    @apply border-gray-200;
+  }
   body {
     @apply font-sans text-gray-900 bg-[#fbfbfd];
   }
+}
 
+@layer utilities {
   .prose {
     @apply text-gray-800 leading-relaxed break-words;
   }

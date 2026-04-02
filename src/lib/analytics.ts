@@ -28,7 +28,17 @@ export async function logActivity(
 
     if (path) logData.path = path;
     if (action) logData.action = action;
-    if (metadata) logData.metadata = metadata;
+    
+    // Clean metadata of undefined values
+    if (metadata) {
+      const cleanedMetadata: any = {};
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (value !== undefined) {
+          cleanedMetadata[key] = value;
+        }
+      });
+      logData.metadata = cleanedMetadata;
+    }
 
     await addDoc(collection(db, 'activity_logs'), logData);
   } catch (error) {

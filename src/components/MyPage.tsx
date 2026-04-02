@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { db, collection, collectionGroup, query, orderBy, auth, setDoc, doc, getDoc, getDocs, serverTimestamp, writeBatch } from '../firebase';
 import { where } from 'firebase/firestore';
 import { useCollection, useDocumentData } from 'react-firebase-hooks/firestore';
@@ -13,7 +12,7 @@ import { CommentCount } from './CommentCount';
 import { toast } from 'sonner';
 import { ScrapStats } from './ScrapStats';
 import { LinksDialog } from './LinksDialog';
-import { QASection } from './QASection';
+import { safeStringify } from '../lib/firestore';
 
 interface MyPageProps {
   onSelectScrap: (scrap: Scrap) => void;
@@ -215,14 +214,23 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         }));
 
         exportData.scraps.push({
-          ...scrap,
+          id: scrap.id,
+          title: scrap.title,
+          content: scrap.content,
+          status: scrap.status,
+          authorId: scrap.authorId,
+          authorName: scrap.authorName,
+          authorPhoto: scrap.authorPhoto,
+          icon_emoji: scrap.icon_emoji,
+          tags: scrap.tags,
+          commentCount: scrap.commentCount,
           createdAt: scrap.createdAt?.toDate().toISOString(),
           updatedAt: scrap.updatedAt?.toDate().toISOString(),
           comments,
         });
       }
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([safeStringify(exportData, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -270,10 +278,6 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
 
   return (
     <div className="space-y-10 pb-20">
-      <Helmet>
-        <title>マイページ | じょはり</title>
-        <meta name="robots" content="noindex" />
-      </Helmet>
       {/* Profile Section */}
       <section className="glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 p-5 sm:p-10 shadow-2xl shadow-blue-500/5 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -501,9 +505,6 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         </div>
       </section>
       
-      {/* Q&A Section */}
-      {/* <QASection userId={authUser.uid} /> */}
-
       {/* Scraps Section */}
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">

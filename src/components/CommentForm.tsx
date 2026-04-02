@@ -28,9 +28,12 @@ interface CommentFormProps {
   parentId?: string;
   onSuccess?: () => void;
   autoFocus?: boolean;
+  onCreateScrap?: (title: string) => void;
 }
 
-export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: CommentFormProps) {
+import { parseScrapboxLinks, extractLinkedTitles } from '../lib/scrapbox';
+
+export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateScrap }: CommentFormProps) {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
@@ -132,6 +135,10 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
 
     setIsSubmitting(true);
     const path = `scraps/${scrapId}/comments`;
+    
+    // Extract linked titles for Scrapbox-like features
+    const linkedTitles = extractLinkedTitles(content);
+
     try {
       await addDoc(collection(db, path), {
         content: content.trim(),
@@ -139,6 +146,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
         authorName: auth.currentUser.displayName || 'Anonymous',
         authorPhoto: auth.currentUser.photoURL || '',
         createdAt: serverTimestamp(),
+        linkedTitles, // Save linked titles
         ...(parentId ? { parentId } : {}),
         ...(Object.keys(images).length > 0 ? { images } : {}),
       });
@@ -151,7 +159,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus }: Comment
 
       setContent('');
       setImages({});
-      logActivity(ActivityType.ACTION, undefined, 'post_comment', { scrapId, parentId: parentId || null });
+      logActivity(ActivityType.ACTION, undefined, 'post_comment', { scrapId, parentId: parentId || null, linkedTitles });
       toast.success('コメントを投稿しました');
       onSuccess?.();
     } catch (error) {

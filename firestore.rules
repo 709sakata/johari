@@ -44,29 +44,6 @@ service cloud.firestore {
     //   - links: list (optional, objects with title and url)
     //   - updatedAt: timestamp (required)
     //
-    // Collection: identity_tasks
-    // Document ID: auto-generated
-    // Fields:
-    //   - userId: string (required, matches auth.uid)
-    //   - type: string (required, ['digital-twin-edit'])
-    //   - question: string (required)
-    //   - steps: map (optional)
-    //     - observation: string
-    //     - gap: string
-    //     - question: string
-    //   - status: string (required, ['pending', 'completed'])
-    //   - answer: string (optional)
-    //   - createdAt: timestamp (required)
-    //
-    // Subcollection: identity_tasks/{taskId}/qa_comments
-    // Document ID: auto-generated
-    // Fields:
-    //   - content: string (required, 1-10000 chars)
-    //   - authorId: string (required, matches auth.uid)
-    //   - authorName: string (required)
-    //   - authorPhoto: string (optional)
-    //   - createdAt: timestamp (required)
-    //
     // ===============================================================
 
     // ===============================================================
@@ -129,49 +106,6 @@ service cloud.firestore {
              data.updatedAt is timestamp;
     }
 
-    function isValidIdentityTask(data) {
-      return hasOnlyAllowedFields(data, ['userId', 'type', 'question', 'steps', 'status', 'createdAt', 'updatedAt', 'completedAt', 'answer', 'scrapId']) &&
-             data.userId is string &&
-             data.type in ['digital-twin-edit'] &&
-             data.question is string && data.question.size() > 0 && data.question.size() <= 10000 &&
-             data.status in ['pending', 'completed', 'cancelled'] &&
-             data.createdAt is timestamp &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
-             (!('completedAt' in data) || data.completedAt is timestamp) &&
-             (!('answer' in data) || (data.answer is string && data.answer.size() <= 200000)) &&
-             (!('scrapId' in data) || data.scrapId is string) &&
-             data.steps is map &&
-             data.steps.keys().hasAll(['observation', 'gap', 'question']) &&
-             data.steps.observation is string && data.steps.observation.size() <= 200000 &&
-             data.steps.gap is string && data.steps.gap.size() <= 200000 &&
-             data.steps.question is string && data.steps.question.size() <= 200000;
-    }
-
-    function isValidQAComment(data) {
-      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt']) &&
-             data.content is string && data.content.size() > 0 && data.content.size() <= 200000 &&
-             data.authorId is string &&
-             data.authorName is string &&
-             data.createdAt is timestamp &&
-             (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null));
-    }
-
-    function isValidIdentityState(data) {
-      return hasOnlyAllowedFields(data, ['userId', 'coreLogic', 'publicNarrative', 'shadowNarrative', 'unresolvedConflict', 'evolutionLog', 'lastScrapId', 'updatedAt']) &&
-             data.userId is string &&
-             data.coreLogic is string && data.coreLogic.size() <= 200000 &&
-             data.publicNarrative is string && data.publicNarrative.size() <= 200000 &&
-             data.shadowNarrative is string && data.shadowNarrative.size() <= 200000 &&
-             data.unresolvedConflict is map &&
-             data.unresolvedConflict.keys().hasAll(['title', 'deepAnalysis', 'groundingFact']) &&
-             data.unresolvedConflict.title is string && data.unresolvedConflict.title.size() <= 5000 &&
-             data.unresolvedConflict.deepAnalysis is string && data.unresolvedConflict.deepAnalysis.size() <= 100000 &&
-             data.unresolvedConflict.groundingFact is string && data.unresolvedConflict.groundingFact.size() <= 20000 &&
-             data.updatedAt is timestamp &&
-             (!('evolutionLog' in data) || data.evolutionLog is list) &&
-             (!('lastScrapId' in data) || data.lastScrapId is string);
-    }
-
     function isValidActivityLog(data) {
       return hasOnlyAllowedFields(data, ['userId', 'type', 'path', 'action', 'metadata', 'userAgent', 'timestamp']) &&
              data.type in ['page_view', 'action'] &&
@@ -229,15 +163,6 @@ service cloud.firestore {
                       request.resource.data.createdAt == resource.data.createdAt;
     }
 
-    match /{path=**}/qa_comments/{commentId} {
-      allow read: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
-      allow update: if isAuthenticated() && 
-                      isValidQAComment(request.resource.data) && 
-                      (resource.data.authorId == request.auth.uid || isAdmin()) &&
-                      request.resource.data.authorId == resource.data.authorId &&
-                      request.resource.data.createdAt == resource.data.createdAt;
-    }
-
     match /users/{userId} {
       allow read: if true;
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
@@ -256,45 +181,6 @@ service cloud.firestore {
                       request.resource.data.authorId == resource.data.authorId &&
                       request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
-    }
-
-    match /identity_tasks/{taskId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && 
-                      isValidIdentityTask(request.resource.data) && 
-                      request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && 
-                      isValidIdentityTask(request.resource.data) && 
-                      (resource.data.userId == request.auth.uid || isAdmin()) &&
-                      request.resource.data.userId == resource.data.userId &&
-                      request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-
-      match /qa_comments/{commentId} {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/identity_tasks/$(taskId)).data.userId == request.auth.uid || isAdmin());
-        allow create: if isAuthenticated() && 
-                        isValidQAComment(request.resource.data) && 
-                        request.resource.data.authorId == request.auth.uid &&
-                        (get(/databases/$(database)/documents/identity_tasks/$(taskId)).data.userId == request.auth.uid || isAdmin());
-        allow update: if isAuthenticated() && 
-                        isValidQAComment(request.resource.data) && 
-                        (resource.data.authorId == request.auth.uid || isAdmin()) &&
-                        request.resource.data.authorId == resource.data.authorId &&
-                        request.resource.data.createdAt == resource.data.createdAt;
-        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
-      }
-    }
-
-    match /identity_states/{stateId} {
-      allow read: if true;
-      allow create: if isAuthenticated() && 
-                      isValidIdentityState(request.resource.data) && 
-                      request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && 
-                      isValidIdentityState(request.resource.data) && 
-                      (resource.data.userId == request.auth.uid || isAdmin()) &&
-                      request.resource.data.userId == resource.data.userId;
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /activity_logs/{logId} {

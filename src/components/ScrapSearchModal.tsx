@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { db, collection, query, orderBy, limit, getDocs, where } from '../firebase';
 import { Scrap } from '../types';
 import { Search, X, Loader2, MessageSquare, Clock, User } from 'lucide-react';
@@ -17,6 +18,29 @@ export function ScrapSearchModal({ isOpen, onClose, onSelect }: ScrapSearchModal
   const [searchTerm, setSearchTerm] = useState('');
   const [scraps, setScraps] = useState<Scrap[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -98,31 +122,34 @@ export function ScrapSearchModal({ isOpen, onClose, onSelect }: ScrapSearchModal
     return () => clearTimeout(debounce);
   }, [searchTerm, isOpen]);
 
-  if (!isOpen) return null;
+  if (!mounted || !isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-start justify-center pt-[10vh] px-4 sm:px-6 pointer-events-auto"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
       />
       
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: -20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[80vh]"
+        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[75vh]"
       >
-        <div className="p-6 border-b border-gray-50 flex items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 border-b border-gray-50 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1">
             <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shadow-sm">
               <Search className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-black text-gray-900">スレッドをメンション</h3>
+              <h3 className="text-lg font-black text-gray-900">スレッドを検索</h3>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">思考を繋げる</p>
             </div>
           </div>
@@ -191,4 +218,6 @@ export function ScrapSearchModal({ isOpen, onClose, onSelect }: ScrapSearchModal
       </motion.div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

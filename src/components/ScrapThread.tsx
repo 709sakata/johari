@@ -1,4 +1,4 @@
-import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc } from '../firebase';
+import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc, collectionGroup, where, limit } from '../firebase';
 import { useCollection, useDocument } from 'react-firebase-hooks/firestore';
 import { Scrap, Comment, OperationType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -20,7 +20,6 @@ import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
 import { cn } from '../lib/utils';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkPreview } from './LinkPreview';
 import { ScrapMention } from './ScrapMention';
@@ -28,11 +27,36 @@ import { toast } from 'sonner';
 import { DIVERSE_EMOJIS } from '../constants/emojis';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 
+function BacklinkCard({ scrapId, commentContent, onSelectScrap }: { scrapId: string, commentContent: string, onSelectScrap?: (scrap: Scrap) => void }) {
+  const [scrapValue] = useDocument(doc(db, 'scraps', scrapId));
+  
+  if (!scrapValue?.exists()) return null;
+  const scrap = { id: scrapValue.id, ...scrapValue.data() } as Scrap;
+
+  return (
+    <motion.button
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => onSelectScrap?.(scrap)}
+      className="flex flex-col gap-3 p-5 bg-white/60 backdrop-blur-md rounded-3xl border border-white/40 shadow-lg shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 transition-all text-left group"
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-xl group-hover:scale-110 transition-transform">{scrap.icon_emoji || '📄'}</span>
+        <span className="font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">{scrap.title}</span>
+      </div>
+      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed opacity-60 italic">
+        &quot;{commentContent.substring(0, 100)}...&quot;
+      </p>
+    </motion.button>
+  );
+}
+
 interface ScrapThreadProps {
   scrap: Scrap;
   onBack: () => void;
   onSelectUser?: (userId: string) => void;
   onSelectScrap?: (scrap: Scrap) => void;
+  onCreateScrap?: (title: string) => void;
 }
 
 function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectUser }: { authorId: string, authorName: string, authorPhoto: string | null, createdAt: any, onSelectUser?: (userId: string) => void }) {
@@ -83,11 +107,24 @@ function BioDisplay({ userId, className }: { userId: string, className?: string 
   return <ExpandableBio bio={bio} className={className} />;
 }
 
-export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelectScrap }: ScrapThreadProps) {
+import { parseScrapboxLinks } from '../lib/scrapbox';
+import { ScrapLink } from './ScrapLink';
+
+export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelectScrap, onCreateScrap }: ScrapThreadProps) {
   const [scrapValue, scrapLoading, scrapError] = useDocument(doc(db, `scraps/${initialScrap.id}`));
   const [commentsValue, loading, error] = useCollection(
     query(collection(db, `scraps/${initialScrap.id}/comments`), orderBy('createdAt', 'asc'))
   );
+  
+  // Fetch backlinks (comments that mention this scrap's title)
+  const [backlinksValue] = useCollection(
+    query(
+      collectionGroup(db, 'comments'),
+      where('linkedTitles', 'array-contains', initialScrap.title),
+      limit(20)
+    )
+  );
+  
   const [isUpdating, setIsUpdating] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -418,20 +455,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
-      <Helmet>
-        <title>{scrap?.title ? `${scrap.authorName} | ${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'}</title>
-        <meta name="description" content={description} />
-        <meta property="og:title" content={scrap?.title ? `${scrap.authorName} | ${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
-        <meta property="og:description" content={description} />
-        <meta property="og:image" content={ogImage} />
-        <meta property="og:url" content={url} />
-        <meta name="twitter:title" content={scrap?.title ? `${scrap.authorName} | ${scrap.title} | じょはり` : 'スレッド詳細 | じょはり'} />
-        <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={ogImage} />
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
-        </script>
-      </Helmet>
       <div className="">
         <button
           onClick={onBack}
@@ -800,6 +823,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   setDeletingCommentId={setDeletingCommentId}
                   onSelectUser={onSelectUser}
                   onSelectScrap={onSelectScrap}
+                  onCreateScrap={onCreateScrap}
                 />
               ))}
             </div>
@@ -808,7 +832,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             {scrap.status === 'open' ? (
               auth.currentUser ? (
                 <div className="px-0">
-                  <CommentForm scrapId={scrap.id} />
+                  <CommentForm scrapId={scrap.id} onCreateScrap={onCreateScrap} />
                 </div>
               ) : (
                 <div className="px-0">
@@ -832,6 +856,40 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             </div>
           )}
           <div ref={bottomRef} className="h-px" />
+
+          {/* Backlinks Section */}
+          {backlinksValue && backlinksValue.docs.length > 0 && (
+            <div className="mt-20 pt-20 border-t border-gray-100">
+              <div className="flex items-center gap-3 mb-10">
+                <div className="p-2.5 bg-blue-50 rounded-xl">
+                  <Hash className="w-5 h-5 text-blue-600" />
+                </div>
+                <h3 className="font-display text-xl font-bold text-gray-900 tracking-tight">リンクされているスレッド</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {backlinksValue.docs
+                  .filter(doc => {
+                    // Don't show links from the current scrap
+                    const path = doc.ref.path;
+                    return !path.includes(`scraps/${initialScrap.id}/`);
+                  })
+                  .map(backlinkDoc => {
+                    const data = backlinkDoc.data() as Comment;
+                    const scrapId = backlinkDoc.ref.parent.parent?.id;
+                    if (!scrapId) return null;
+
+                    return (
+                      <BacklinkCard 
+                        key={backlinkDoc.id} 
+                        scrapId={scrapId} 
+                        commentContent={data.content}
+                        onSelectScrap={onSelectScrap}
+                      />
+                    );
+                  })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -1061,6 +1119,7 @@ function CommentItem({
   setDeletingCommentId,
   onSelectUser,
   onSelectScrap,
+  onCreateScrap,
   isReply = false
 }: any) {
   const [isReplying, setIsReplying] = useState(false);
@@ -1069,9 +1128,13 @@ function CommentItem({
   const replies = allReplies.filter((r: any) => r.parentId === comment.id);
   const isEditing = editingCommentId === comment.id;
 
-  // Helper to render content with base64 images
+  // Helper to render content with base64 images and scrapbox links
   const getRenderContent = () => {
     let content = comment.content;
+    
+    // Parse scrapbox links [Title] -> [Title](scrap:Title)
+    content = parseScrapboxLinks(content);
+
     if (comment.images) {
       Object.entries(comment.images).forEach(([id, base64]) => {
         // Ensure we replace both the markdown syntax and any other occurrences
@@ -1243,7 +1306,7 @@ function CommentItem({
                       {...props} 
                       className="max-h-64 sm:max-h-96 rounded-2xl shadow-xl cursor-zoom-in hover:opacity-95 transition-all hover:scale-[1.02] my-6" 
                       onClick={() => {
-                        setEnlargedImageUrl(props.src || null);
+                        setEnlargedImageUrl((props.src as string) || null);
                         setIsEnlarged(true);
                       }}
                     />
@@ -1252,7 +1315,20 @@ function CommentItem({
                 a: ({ node, ...props }) => {
                   const isUrl = props.href && (props.href.startsWith('http://') || props.href.startsWith('https://'));
                   const isScrapMention = props.href && props.href.startsWith('/scraps/');
+                  const isScrapboxLink = props.href && props.href.startsWith('scrap:');
                   
+                  if (isScrapboxLink && props.href) {
+                    const title = decodeURIComponent(props.href.split('scrap:')[1]);
+                    return (
+                      <ScrapLink 
+                        title={title} 
+                        className="my-0.5" 
+                        onClick={(scrap) => onSelectScrap?.(scrap)}
+                        onCreate={(title) => onCreateScrap?.(title)}
+                      />
+                    );
+                  }
+
                   if (isScrapMention && props.href) {
                     const scrapId = props.href.split('/').pop() || '';
                     return (
@@ -1342,6 +1418,7 @@ function CommentItem({
               parentId={comment.id} 
               onSuccess={() => setIsReplying(false)}
               autoFocus
+              onCreateScrap={onCreateScrap}
             />
           </motion.div>
         )}
@@ -1390,6 +1467,7 @@ function CommentItem({
               setDeletingCommentId={setDeletingCommentId}
               onSelectUser={onSelectUser}
               onSelectScrap={onSelectScrap}
+              onCreateScrap={onCreateScrap}
               isReply={true}
             />
           ))}
