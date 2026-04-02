@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { db, auth, collection, addDoc, serverTimestamp } from '../firebase';
+import { db, auth, collection, addDoc, serverTimestamp, doc, getDoc } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
 import { Plus, Loader2, ArrowLeft, MessageSquare } from 'lucide-react';
@@ -37,12 +37,19 @@ export function NewScrapPage({ onClose, onSuccess, initialTitle = '' }: NewScrap
       .filter(tag => tag.length > 0);
 
     try {
+      // Fetch latest user profile from Firestore to ensure we have the correct name
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.exists() ? userDoc.data() : null;
+      
+      const authorName = userData?.displayName || auth.currentUser.displayName || 'Anonymous';
+      const authorPhoto = userData?.photoURL || auth.currentUser.photoURL || '';
+
       const docRef = await addDoc(collection(db, path), {
         title: title.trim(),
         status: 'open',
         authorId: auth.currentUser.uid,
-        authorName: auth.currentUser.displayName || 'Anonymous',
-        authorPhoto: auth.currentUser.photoURL || '',
+        authorName: authorName,
+        authorPhoto: authorPhoto,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         commentCount: 0,

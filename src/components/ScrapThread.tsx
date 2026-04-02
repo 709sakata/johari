@@ -99,7 +99,7 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
             </div>
           )}
         </div>
-        <p className="font-display font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight mb-1">{authorName}</p>
+        <p className="font-display font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight mb-1">{authorDoc?.data()?.displayName || authorName}</p>
         <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">作成者</p>
       </div>
       {bio && (

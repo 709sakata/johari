@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { db, auth, collection, addDoc, serverTimestamp, doc, updateDoc, increment } from '../firebase';
+import { db, auth, collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
 import { Send, Loader2, Eye, Edit3, Image as ImageIcon, X, Hash, AtSign } from 'lucide-react';
@@ -141,11 +141,18 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
     const linkedTitles = extractLinkedTitles(content);
 
     try {
+      // Fetch latest user profile from Firestore to ensure we have the correct name
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.exists() ? userDoc.data() : null;
+      
+      const authorName = userData?.displayName || auth.currentUser.displayName || 'Anonymous';
+      const authorPhoto = userData?.photoURL || auth.currentUser.photoURL || '';
+
       await addDoc(collection(db, path), {
         content: content.trim(),
         authorId: auth.currentUser.uid,
-        authorName: auth.currentUser.displayName || 'Anonymous',
-        authorPhoto: auth.currentUser.photoURL || '',
+        authorName: authorName,
+        authorPhoto: authorPhoto,
         createdAt: serverTimestamp(),
         linkedTitles, // Save linked titles
         ...(parentId ? { parentId } : {}),

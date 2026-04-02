@@ -77,7 +77,7 @@ service cloud.firestore {
     }
 
     function isValidComment(data) {
-      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt', 'updatedAt', 'parentId', 'images']) &&
+      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt', 'updatedAt', 'parentId', 'images', 'linkedTitles']) &&
              data.content is string && data.content.size() >= 0 && data.content.size() <= 200000 &&
              data.authorId is string &&
              data.authorName is string &&
@@ -85,7 +85,8 @@ service cloud.firestore {
              (!('parentId' in data) || data.parentId is string) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp) &&
              (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null)) &&
-             (!('images' in data) || (data.images is map && data.images.size() <= 10));
+             (!('images' in data) || (data.images is map && data.images.size() <= 10)) &&
+             (!('linkedTitles' in data) || (data.linkedTitles is list && data.linkedTitles.size() <= 100));
     }
 
     function isValidFeed(data) {
@@ -99,7 +100,7 @@ service cloud.firestore {
     function isValidUser(data) {
       return hasOnlyAllowedFields(data, ['displayName', 'photoURL', 'bio', 'links', 'updatedAt', 'role']) &&
              data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+             (!('photoURL' in data) || (data.photoURL is string || data.photoURL == null)) &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
              (!('links' in data) || (data.links is list && data.links.size() <= 100)) &&
              (!('role' in data) || (data.role in ['admin', 'user'])) &&
@@ -115,6 +116,39 @@ service cloud.firestore {
              (!('action' in data) || data.action is string) &&
              (!('metadata' in data) || data.metadata is map) &&
              (!('userAgent' in data) || data.userAgent is string);
+    }
+
+    function isValidQAComment(data) {
+      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt', 'updatedAt']) &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 10000 &&
+             data.authorId is string &&
+             data.authorName is string &&
+             data.createdAt is timestamp &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null));
+    }
+
+    function isValidIdentityTask(data) {
+      return hasOnlyAllowedFields(data, ['userId', 'type', 'question', 'status', 'answer', 'createdAt', 'updatedAt']) &&
+             data.userId is string &&
+             data.type in ['fact-check', 'meta-cognition'] &&
+             data.question is string && data.question.size() > 0 && data.question.size() <= 1000 &&
+             data.status in ['pending', 'completed'] &&
+             (!('answer' in data) || (data.answer is string && data.answer.size() <= 5000)) &&
+             data.createdAt is timestamp &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidIdentityState(data) {
+      return hasOnlyAllowedFields(data, ['userId', 'coreLogic', 'publicNarrative', 'shadowNarrative', 'unresolvedConflict', 'evolutionLog', 'lastScrapId', 'updatedAt']) &&
+             data.userId is string &&
+             data.coreLogic is string && data.coreLogic.size() <= 10000 &&
+             data.publicNarrative is string && data.publicNarrative.size() <= 10000 &&
+             data.shadowNarrative is string && data.shadowNarrative.size() <= 10000 &&
+             data.unresolvedConflict is string && data.unresolvedConflict.size() <= 10000 &&
+             (!('evolutionLog' in data) || data.evolutionLog is list) &&
+             (!('lastScrapId' in data) || data.lastScrapId is string) &&
+             data.updatedAt is timestamp;
     }
 
     function isAdmin() {
@@ -168,6 +202,47 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isOwner(userId) && isValidUser(request.resource.data);
       allow delete: if isOwner(userId);
+    }
+
+    match /identity_tasks/{taskId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && 
+                      isValidIdentityTask(request.resource.data) && 
+                      (resource.data.userId == request.auth.uid || isAdmin()) &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+
+      match /qa_comments/{commentId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/identity_tasks/$(taskId)).data.userId == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() && 
+                        isValidQAComment(request.resource.data) && 
+                        request.resource.data.authorId == request.auth.uid;
+        allow update: if isAuthenticated() && 
+                        isValidQAComment(request.resource.data) && 
+                        (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                        request.resource.data.authorId == resource.data.authorId &&
+                        request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Support collection group queries for qa_comments
+    match /{path=**}/qa_comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                      isValidQAComment(request.resource.data) && 
+                      (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                      request.resource.data.authorId == resource.data.authorId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    match /identity_states/{stateId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /feeds/{feedId} {
