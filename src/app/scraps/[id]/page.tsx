@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       };
     }
 
-    const title = `${data.title} | じょはり`;
+    const title = data.title;
     
     // Fetch the first comment to use as description
     let firstCommentContent = '';
