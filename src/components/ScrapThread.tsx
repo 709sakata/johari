@@ -31,6 +31,7 @@ import { DIVERSE_EMOJIS } from '../constants/emojis';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { parseScrapboxLinks } from '../lib/scrapbox';
 import { ScrapLink } from './ScrapLink';
+import { LatestScrapsSidebar } from './LatestScrapsSidebar';
 
 function BacklinkCard({ scrapId, commentContent, onSelectScrap }: { scrapId: string, commentContent: string, onSelectScrap?: (scrap: Scrap) => void }) {
   const [scrapValue] = useDocument(doc(db, 'scraps', scrapId));
@@ -952,6 +953,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
               />
             </div>
           </div>
+
+          {/* Latest Scraps Sidebar */}
+          <LatestScrapsSidebar 
+            currentScrapId={scrap.id} 
+            onSelectScrap={onSelectScrap} 
+          />
 
           {/* Table of Contents (Hierarchical) */}
           {parentComments.length > 0 && (

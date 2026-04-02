@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const q = query(
       collection(db, 'scraps'),
       orderBy('updatedAt', 'desc'),
-      limit(100) // Limit to top 100 for sitemap performance
+      limit(500) // Increase limit for better coverage
     );
     const snapshot = await getDocs(q);
     scrapRoutes = snapshot.docs.map(doc => {
