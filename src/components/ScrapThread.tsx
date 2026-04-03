@@ -1340,7 +1340,7 @@ function CommentItem({
                   return (
                     <div className="relative w-full h-64 sm:h-96 my-6">
                       <Image 
-                        src={props.src} 
+                        src={props.src as string} 
                         alt={(props.alt as string) || ''}
                         fill
                         className="rounded-2xl shadow-xl cursor-zoom-in hover:opacity-95 transition-all hover:scale-[1.02] object-contain" 

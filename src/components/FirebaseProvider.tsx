@@ -30,7 +30,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return args.map(arg => {
         try {
           if (arg instanceof Node) {
-            return `[DOM Node: ${arg.nodeName}${arg.id ? '#' + arg.id : ''}]`;
+            const id = arg instanceof Element ? arg.id : '';
+            return `[DOM Node: ${arg.nodeName}${id ? '#' + id : ''}]`;
           }
           if (typeof arg === 'object' && arg !== null) {
             // Check for React internal properties which cause circularity

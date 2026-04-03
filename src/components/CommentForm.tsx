@@ -54,7 +54,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
-        const img = new Image();
+        const img = new window.Image();
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
@@ -381,7 +381,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
                       return (
                         <div className="relative w-full h-48 sm:h-64 my-4">
                           <Image 
-                            src={props.src} 
+                            src={props.src as string} 
                             alt={(props.alt as string) || ''}
                             fill
                             className="rounded-xl shadow-sm border border-gray-100 object-contain" 
