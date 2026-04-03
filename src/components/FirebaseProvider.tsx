@@ -21,43 +21,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-    // Monkey-patch console.warn/error to prevent circular structure errors in AI Studio
-    // Optimized to avoid expensive Object.keys checks on every log
-    const originalWarn = console.warn;
-    const originalError = console.error;
-
-    const sanitizeArgs = (args: any[]) => {
-      return args.map(arg => {
-        try {
-          if (arg instanceof Node) {
-            const id = arg instanceof Element ? arg.id : '';
-            return `[DOM Node: ${arg.nodeName}${id ? '#' + id : ''}]`;
-          }
-          if (typeof arg === 'object' && arg !== null) {
-            // Check for React internal properties which cause circularity
-            // Using a more direct check instead of Object.keys().some()
-            for (const key in arg) {
-              if (key.startsWith('__react')) {
-                return `[React Internal Object]`;
-              }
-            }
-          }
-        } catch (e) {
-          return '[Unsafe Object]';
-        }
-        return arg;
-      });
-    };
-
-    console.warn = (...args: any[]) => originalWarn(...sanitizeArgs(args));
-    console.error = (...args: any[]) => originalError(...sanitizeArgs(args));
-
     // Safety timeout for auth initialization
     const timeout = setTimeout(() => {
-      if (!isAuthReady) {
-        console.warn('Auth initialization timed out, proceeding anyway...');
-        setIsAuthReady(true);
-      }
+      console.warn('Auth initialization timed out, proceeding anyway...');
+      setIsAuthReady(true);
     }, 5000);
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -69,10 +36,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       unsubscribe();
       clearTimeout(timeout);
-      console.warn = originalWarn;
-      console.error = originalError;
     };
-  }, [isAuthReady]); // Run once on mount, but include isAuthReady for linting
+  }, []); // Run once on mount
 
   if (!isAuthReady) {
     return (

@@ -23,6 +23,11 @@ interface PublicProfileProps {
 export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicProfileProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -86,12 +91,6 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
   const filteredLinks = (userProfile.links || []).filter(url => 
     url.toLowerCase().includes(linkSearch.toLowerCase())
   );
-
-  const [origin, setOrigin] = useState('');
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
 
   const title = `${userProfile.displayName || "ユーザー"} のプロフィール | じょはり`;
   const description = userProfile.bio || `${userProfile.displayName || "ユーザー"} さんの思考の窓。じょはり で思考を整理し、対話を楽しんでいます。`;

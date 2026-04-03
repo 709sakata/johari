@@ -24,6 +24,12 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
   const [statusTab, setStatusTab] = useState<'open' | 'closed'>('open');
   const [copied, setCopied] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
   const authUser = auth.currentUser;
 
   // Profile data
@@ -137,12 +143,6 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
     newLinks[index] = value;
     setEditLinks(newLinks);
   };
-
-  const [origin, setOrigin] = useState('');
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
 
   const embedCode = authUser ? `<iframe src="${origin}/users/${authUser.uid}?embed=true" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eee;"></iframe>` : '';
 
