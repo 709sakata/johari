@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { cache } from 'react';
 import type { Metadata } from 'next';
 import { db, doc, getDoc as getDocClient, collection, query, orderBy, limit, getDocs } from '../../../firebase';
 import { Scrap, Comment } from '../../../types';
@@ -10,103 +10,92 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+// Cache the scrap data fetching to avoid redundant calls between metadata and page
+const getCachedScrapData = cache(async (id: string) => {
+  try {
+    const scrapDoc = await getDocClient(doc(db, 'scraps', id));
+    if (!scrapDoc.exists()) return null;
+    
+    const data = scrapDoc.data();
+    const scrap = { 
+      ...data, 
+      id: scrapDoc.id,
+      createdAt: data.createdAt?.toDate().toISOString(),
+      updatedAt: data.updatedAt?.toDate().toISOString(),
+    } as any;
+    
+    let firstComment: any = null;
+    const commentsQuery = query(
+      collection(db, 'scraps', id, 'comments'),
+      orderBy('createdAt', 'asc'),
+      limit(1)
+    );
+    const commentsSnapshot = await getDocs(commentsQuery);
+    if (!commentsSnapshot.empty) {
+      const cData = commentsSnapshot.docs[0].data();
+      firstComment = {
+        ...cData,
+        id: commentsSnapshot.docs[0].id,
+        createdAt: (cData as any).createdAt?.toDate().toISOString(),
+      };
+    }
+    
+    return { scrap, firstComment };
+  } catch (e) {
+    console.error('Error fetching scrap data:', e);
+    return null;
+  }
+});
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   
-  try {
-    let data: Scrap | undefined;
-    
-    // Use Client SDK directly (works if rules allow public read)
-    // This is more reliable in AI Studio where Admin SDK permissions may be restricted
-    const scrapDoc = await getDocClient(doc(db, 'scraps', id));
-    if (scrapDoc.exists()) {
-      data = scrapDoc.data() as Scrap;
-    }
-    
-    if (!data) {
-      return {
-        title: 'スレッドが見つかりません | じょはり',
-      };
-    }
-
-    const title = data.title;
-    
-    // Fetch the first comment to use as description
-    let firstCommentContent = '';
-    try {
-      const commentsQuery = query(
-        collection(db, 'scraps', id, 'comments'),
-        orderBy('createdAt', 'asc'),
-        limit(1)
-      );
-      const commentsSnapshot = await getDocs(commentsQuery);
-      if (!commentsSnapshot.empty) {
-        firstCommentContent = (commentsSnapshot.docs[0].data() as Comment).content;
-      }
-    } catch (e) {
-      console.error('Error fetching first comment for metadata:', e);
-    }
-
-    const description = firstCommentContent 
-      ? firstCommentContent.substring(0, 160).replace(/[#*`]/g, '').trim() + '...'
-      : `新しいスレッド「${data.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`;
-    
-    const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
-    const ogImage = `${host}/api/og-image/${id}`;
-
+  const data = await getCachedScrapData(id);
+  
+  if (!data) {
     return {
-      title,
-      description,
-      keywords: [...(data.tags || []), 'じょはり', '思考整理'],
-      alternates: {
-        canonical: `/scraps/${id}`,
-      },
-      openGraph: {
-        title,
-        description,
-        images: [ogImage],
-        type: 'article',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description,
-        images: [ogImage],
-      },
-    };
-  } catch (error) {
-    console.error('Metadata generation error:', error);
-    return {
-      title: 'じょはり | まだ知らない自分に出会う思考の窓',
+      title: 'スレッドが見つかりません | じょはり',
     };
   }
+
+  const { scrap, firstComment } = data;
+  const title = scrap.title;
+  
+  const description = firstComment 
+    ? firstComment.content.substring(0, 160).replace(/[#*`]/g, '').trim() + '...'
+    : `新しいスレッド「${scrap.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`;
+  
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  const ogImage = `${host}/api/og-image/${id}`;
+
+  return {
+    title,
+    description,
+    keywords: [...(scrap.tags || []), 'じょはり', '思考整理'],
+    alternates: {
+      canonical: `/scraps/${id}`,
+    },
+    openGraph: {
+      title,
+      description,
+      images: [ogImage],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
 }
 
 export default async function ScrapPage({ params }: PageProps) {
   const { id } = await params;
 
-  // Fetch data for JSON-LD
-  let scrapData: Scrap | null = null;
-  let firstComment: Comment | null = null;
-  try {
-    const scrapDoc = await getDocClient(doc(db, 'scraps', id));
-    if (scrapDoc.exists()) {
-      scrapData = scrapDoc.data() as Scrap;
-      
-      // Fetch first comment for JSON-LD body
-      const commentsQuery = query(
-        collection(db, 'scraps', id, 'comments'),
-        orderBy('createdAt', 'asc'),
-        limit(1)
-      );
-      const commentsSnapshot = await getDocs(commentsQuery);
-      if (!commentsSnapshot.empty) {
-        firstComment = commentsSnapshot.docs[0].data() as Comment;
-      }
-    }
-  } catch (e) {
-    console.error('Error fetching scrap for JSON-LD:', e);
-  }
+  const data = await getCachedScrapData(id);
+  const scrapData = data?.scrap || null;
+  const firstComment = data?.firstComment || null;
 
   const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
   
@@ -121,8 +110,8 @@ export default async function ScrapPage({ params }: PageProps) {
       'name': scrapData.authorName,
       'url': `${host}/profile/${scrapData.authorId}`
     },
-    'datePublished': scrapData.createdAt?.toDate().toISOString(),
-    'dateModified': scrapData.updatedAt?.toDate().toISOString(),
+    'datePublished': scrapData.createdAt,
+    'dateModified': scrapData.updatedAt,
     'url': `${host}/scraps/${id}`,
     'image': `${host}/api/og-image/${id}`,
     'interactionStatistic': {
@@ -165,7 +154,7 @@ export default async function ScrapPage({ params }: PageProps) {
       />
       <Header />
       <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
-        <ScrapThreadWrapper id={id} />
+        <ScrapThreadWrapper id={id} initialData={scrapData} />
       </main>
       <Footer />
     </div>

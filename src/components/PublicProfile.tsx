@@ -19,11 +19,12 @@ interface PublicProfileProps {
   onSelectScrap: (scrap: Scrap) => void;
   onSelectUser: (userId: string) => void;
   isEmbed?: boolean;
+  initialUserProfile?: UserProfile | null;
 }
 
-export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed }: PublicProfileProps) {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
+export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed, initialUserProfile }: PublicProfileProps) {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(initialUserProfile || null);
+  const [isProfileLoading, setIsProfileLoading] = useState(!initialUserProfile);
   const [origin, setOrigin] = useState('');
 
   useEffect(() => {
@@ -56,6 +57,12 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed }: 
   );
 
   const allScraps = value?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap)) || [];
+
+  const getDisplayDate = (date: any) => {
+    if (!date) return null;
+    if (typeof date.toDate === 'function') return date.toDate();
+    return new Date(date);
+  };
 
   const getPlatformIcon = (url: string) => {
     const lowerUrl = url.toLowerCase();
@@ -177,7 +184,7 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed }: 
       {/* Scraps Section */}
       <div className={cn("space-y-8", isEmbed && "space-y-4")}>
         {!isEmbed && (
-          <h3 className="font-display text-2xl font-bold text-gray-900 flex items-center gap-4 ml-2 tracking-tight">
+          <h3 className="hidden sm:flex font-display text-2xl font-bold text-gray-900 items-center gap-4 ml-2 tracking-tight">
             <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
               <MessageSquare className="w-5 h-5 text-white" />
             </div>
@@ -246,7 +253,7 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed }: 
                         <div className="flex items-center gap-5 text-gray-400">
                           <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
                             <Clock className="w-3.5 h-3.5" />
-                            {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                            {scrap.updatedAt ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
                           </span>
                           <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
                         </div>

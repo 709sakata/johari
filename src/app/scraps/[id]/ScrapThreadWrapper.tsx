@@ -9,12 +9,13 @@ import { Loader2 } from 'lucide-react';
 
 interface ScrapThreadWrapperProps {
   id: string;
+  initialData?: Scrap | null;
 }
 
-export const ScrapThreadWrapper: React.FC<ScrapThreadWrapperProps> = ({ id }) => {
+export const ScrapThreadWrapper: React.FC<ScrapThreadWrapperProps> = ({ id, initialData }) => {
   const router = useRouter();
-  const [scrap, setScrap] = useState<Scrap | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [scrap, setScrap] = useState<Scrap | null>(initialData || null);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

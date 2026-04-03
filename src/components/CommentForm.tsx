@@ -305,27 +305,28 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
   };
 
   return (
-    <div className="bg-white p-3 sm:p-8 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm w-full">
-      <div className="flex mb-4">
-        <div className="flex bg-gray-100 p-1 rounded-xl">
+    <div className="bg-white/40 backdrop-blur-xl p-4 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/5 w-full relative overflow-hidden group/form">
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/10 via-blue-500/30 to-blue-500/10 opacity-0 group-hover/form:opacity-100 transition-opacity" />
+      <div className="flex mb-8">
+        <div className="flex bg-gray-100/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-200/20 shadow-inner">
           <button
             type="button"
             onClick={() => setIsPreview(false)}
-            className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              !isPreview ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            className={`flex items-center gap-2.5 px-5 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${
+              !isPreview ? "bg-white text-blue-600 shadow-md scale-105" : "text-gray-400 hover:text-gray-600"
             }`}
           >
-            <Edit3 className="w-3.5 h-3.5" />
+            <Edit3 className="w-4 h-4" />
             <span className="hidden sm:inline">編集</span>
           </button>
           <button
             type="button"
             onClick={() => setIsPreview(true)}
-            className={`flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              isPreview ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            className={`flex items-center gap-2.5 px-5 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${
+              isPreview ? "bg-white text-blue-600 shadow-md scale-105" : "text-gray-400 hover:text-gray-600"
             }`}
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Eye className="w-4 h-4" />
             <span className="hidden sm:inline">プレビュー</span>
           </button>
         </div>
@@ -448,7 +449,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
                 minRows={parentId ? 4 : 8}
                 maxRows={20}
                 autoFocus={autoFocus}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                className="w-full px-6 py-5 rounded-3xl border border-blue-100 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all resize-none text-gray-800 placeholder:text-gray-300 shadow-inner"
                 maxLength={50000}
               />
             </motion.div>
@@ -487,7 +488,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
           <button
             type="submit"
             disabled={isSubmitting || !content.trim()}
-            className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+            className="flex items-center gap-3 px-6 sm:px-8 py-3 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-blue-200 active:scale-95"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             <span className="hidden sm:inline">コメントを投稿</span>

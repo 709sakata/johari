@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['firebase-admin'],
+  allowedDevOrigins: ['ais-dev-c662wz7d424imcwgu5nfrw-96196646215.asia-northeast1.run.app'],
   images: {
     remotePatterns: [
       {

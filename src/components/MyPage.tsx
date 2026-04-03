@@ -512,7 +512,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
       
       {/* Scraps Section */}
       <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="hidden sm:flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <h2 className="font-display text-2xl font-bold text-gray-900 flex items-center gap-4 tracking-tight">
             <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
               <LayoutGrid className="w-5 h-5 text-white" />
@@ -524,18 +524,18 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         <div className="space-y-0">
           {/* Tabs & Export */}
           <div className="flex items-center justify-between gap-4 mb-0">
-            <div className="flex items-center gap-1.5 bg-white/40 backdrop-blur-md p-2 rounded-t-[2.5rem] w-fit border-t border-x border-white/40 shadow-sm">
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-white/40 backdrop-blur-md p-1.5 sm:p-2 rounded-t-2xl sm:rounded-t-[2.5rem] w-fit border-t border-x border-white/40 shadow-sm">
               <button
                 onClick={() => setStatusTab('open')}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all",
+                  "flex items-center gap-1.5 sm:gap-2.5 px-3 py-2 sm:px-6 sm:py-3 text-[10px] sm:text-sm font-black uppercase tracking-widest rounded-xl sm:rounded-2xl transition-all",
                   statusTab === 'open' 
                     ? "bg-white text-emerald-600 shadow-xl shadow-emerald-500/10 ring-1 ring-black/5" 
                     : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
                 )}
               >
                 <div className={cn(
-                  "w-2 h-2 rounded-full",
+                  "w-1.5 h-1.5 sm:w-2 h-2 rounded-full",
                   statusTab === 'open' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-gray-300"
                 )} />
                 Open
@@ -543,13 +543,13 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
               <button
                 onClick={() => setStatusTab('closed')}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-3 text-sm font-black uppercase tracking-widest rounded-2xl transition-all",
+                  "flex items-center gap-1.5 sm:gap-2.5 px-3 py-2 sm:px-6 sm:py-3 text-[10px] sm:text-sm font-black uppercase tracking-widest rounded-xl sm:rounded-2xl transition-all",
                   statusTab === 'closed' 
                     ? "bg-white text-gray-600 shadow-xl shadow-black/10 ring-1 ring-black/5" 
                     : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
                 )}
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-3 h-3 sm:w-4 h-4" />
                 Closed
               </button>
             </div>
@@ -557,7 +557,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
             <button
               onClick={handleExportJSON}
               disabled={isExporting}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-2 sm:px-4 sm:py-2.5 bg-white border border-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
               title="データをJSONでエクスポート"
             >
               {isExporting ? (

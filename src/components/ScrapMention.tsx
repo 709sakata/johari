@@ -38,14 +38,14 @@ export function ScrapMention({ scrapId, className, onClick }: ScrapMentionProps)
     <span 
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer shadow-sm active:scale-95 group",
+        "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 backdrop-blur-sm text-blue-700 rounded-xl border border-blue-100/50 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 group",
         className
       )}
     >
-      <span className="text-sm group-hover:scale-110 transition-transform select-none">
+      <span className="text-sm group-hover:scale-125 transition-transform select-none">
         {scrap.icon_emoji || '📄'}
       </span>
-      <span className="truncate max-w-[150px] sm:max-w-[250px]">
+      <span className="truncate max-w-[150px] sm:max-w-[250px] tracking-tight">
         {scrap.title}
       </span>
     </span>

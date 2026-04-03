@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { cache } from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { HomeClient } from './HomeClient';
 import type { Metadata } from 'next';
+import { db, collection, query, orderBy, limit, getDocs } from '../firebase';
+import { Scrap } from '../types';
 
 export const metadata: Metadata = {
   title: 'じょはり | まだ知らない自分に出会う思考の窓',
@@ -12,8 +14,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+const getInitialScraps = cache(async () => {
+  try {
+    const q = query(collection(db, 'scraps'), orderBy('updatedAt', 'desc'), limit(10));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: data.createdAt?.toDate().toISOString(),
+        updatedAt: data.updatedAt?.toDate().toISOString(),
+      };
+    }) as any[];
+  } catch (e) {
+    console.error('Error fetching initial scraps:', e);
+    return [];
+  }
+});
+
+export default async function HomePage() {
   const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  const initialScraps = await getInitialScraps();
   
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -37,7 +59,7 @@ export default function HomePage() {
       <Header />
       
       <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
-        <HomeClient />
+        <HomeClient initialScraps={initialScraps} />
       </main>
 
       <Footer />

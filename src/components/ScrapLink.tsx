@@ -58,12 +58,12 @@ export function ScrapLink({ title, className, onClick, onCreate }: ScrapLinkProp
       <span 
         onClick={() => onCreate?.(title)}
         className={cn(
-          "inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-50 text-red-400 rounded border border-red-100 text-[11px] font-bold cursor-pointer hover:bg-red-100 transition-all group",
+          "inline-flex items-center gap-1.5 px-3 py-1 bg-red-50/80 backdrop-blur-sm text-red-500 rounded-xl border border-red-100/50 text-[11px] font-black cursor-pointer hover:bg-red-100 hover:border-red-200 transition-all shadow-sm hover:shadow-md active:scale-95 group",
           className
         )}
       >
-        <Plus className="w-3 h-3 group-hover:scale-125 transition-transform" />
-        {title}
+        <Plus className="w-3.5 h-3.5 group-hover:scale-125 transition-transform" />
+        <span className="tracking-tight">{title}</span>
       </span>
     );
   }
@@ -72,14 +72,14 @@ export function ScrapLink({ title, className, onClick, onCreate }: ScrapLinkProp
     <span 
       onClick={() => onClick?.(scrap)}
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer shadow-sm active:scale-95 group",
+        "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 backdrop-blur-sm text-blue-700 rounded-xl border border-blue-100/50 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 group",
         className
       )}
     >
-      <span className="text-xs group-hover:scale-110 transition-transform select-none">
+      <span className="text-sm group-hover:scale-125 transition-transform select-none">
         {scrap.icon_emoji || '📄'}
       </span>
-      {scrap.title}
+      <span className="tracking-tight">{scrap.title}</span>
     </span>
   );
 }

@@ -3,8 +3,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ScrapList } from '../components/ScrapList';
+import { Scrap } from '../types';
 
-export function HomeClient() {
+interface HomeClientProps {
+  initialScraps?: Scrap[];
+}
+
+export function HomeClient({ initialScraps }: HomeClientProps) {
   const router = useRouter();
 
   return (
@@ -12,6 +17,7 @@ export function HomeClient() {
       <ScrapList 
         onSelectScrap={(scrap) => router.push(`/scraps/${scrap.id}`, { scroll: false })}
         onSelectUser={(userId) => router.push(`/profile/${userId}`, { scroll: false })}
+        initialScraps={initialScraps}
       />
     </div>
   );

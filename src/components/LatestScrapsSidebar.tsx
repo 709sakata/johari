@@ -36,27 +36,31 @@ export function LatestScrapsSidebar({ currentScrapId, onSelectScrap }: LatestScr
   if (scraps.length === 0) return null;
 
   return (
-    <div className="glass rounded-[2.5rem] p-6 space-y-4">
-      <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-blue-600" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">最新のスレッド</p>
+    <div className="glass rounded-[2.5rem] p-8 space-y-6 border border-white/40 shadow-xl shadow-blue-500/5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-blue-600" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">最新のスレッド</p>
+        </div>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {scraps.map((scrap) => (
           <button
             key={scrap.id}
             onClick={() => onSelectScrap(scrap)}
-            className="w-full text-left group space-y-1"
+            className="w-full text-left group space-y-2 p-3 -m-3 rounded-2xl hover:bg-blue-50/50 transition-all active:scale-[0.98]"
           >
-            <div className="flex items-start gap-2">
-              <span className="text-lg flex-shrink-0 group-hover:scale-110 transition-transform">
-                {scrap.icon_emoji || '📄'}
-              </span>
-              <div className="min-w-0">
-                <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-50 flex-shrink-0">
+                <span className="text-xl">
+                  {scrap.icon_emoji || '📄'}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug tracking-tight">
                   {scrap.title}
                 </h4>
-                <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400 font-medium">
+                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400 font-black uppercase tracking-widest opacity-60">
                   <Clock className="w-3 h-3" />
                   <span>
                     {scrap.updatedAt 

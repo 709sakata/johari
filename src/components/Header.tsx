@@ -30,27 +30,27 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
         <Link 
           href="/"
           className="flex items-center gap-2 cursor-pointer group"
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform">
-            <MessageSquare className="w-6 h-6 text-white" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform">
+            <MessageSquare className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
           </div>
-          <h1 className="text-xl font-black tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
+          <h1 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
             じょはり<span className="text-blue-600">.</span>
           </h1>
         </Link>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-gray-100 transition-all group"
+              className="flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg sm:rounded-xl border border-gray-100 transition-all group"
             >
-              <Search className="w-4 h-4" />
-              <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">検索</span>
+              <Search className="w-3.5 h-3.5 sm:w-4 h-4" />
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest hidden sm:inline">検索</span>
               <div className="hidden lg:flex items-center gap-1 px-1.5 py-0.5 bg-white rounded border border-gray-100 text-[9px] font-black text-gray-300">
                 <span className="text-[10px]">⌘</span> K
               </div>
@@ -86,14 +86,14 @@ export const Header: React.FC = () => {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Auth onMyPageClick={() => {
               router.push('/mypage', { scroll: false });
             }} />
             {user && (
               <Link
                 href="/new-scrap"
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
               >
                 <span className="hidden sm:inline">投稿する</span>
                 <span className="sm:hidden">投稿</span>

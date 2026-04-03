@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { db, collection, query, orderBy, doc, updateDoc } from '../firebase';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { Scrap } from '../types';
@@ -18,12 +18,30 @@ import { TruncatedTitle } from './TruncatedTitle';
 interface ScrapListProps {
   onSelectScrap: (scrap: Scrap) => void;
   onSelectUser: (userId: string) => void;
+  initialScraps?: Scrap[];
 }
 
-export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
+export function ScrapList({ onSelectScrap, onSelectUser, initialScraps }: ScrapListProps) {
   const [value, loading, error] = useCollection(
     query(collection(db, 'scraps'), orderBy('updatedAt', 'desc'))
   );
+  const [windowWidth, setWindowWidth] = useState<number>(1200);
+
+  const scraps = value?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap)) || initialScraps || [];
+  const isActuallyLoading = loading && scraps.length === 0;
+
+  const getDisplayDate = (date: any) => {
+    if (!date) return null;
+    if (typeof date.toDate === 'function') return date.toDate();
+    return new Date(date);
+  };
+
+  useEffect(() => {
+    setWindowWidth(window.innerWidth);
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Migration: Assign random emojis to existing scraps missing one
   useEffect(() => {
@@ -46,7 +64,7 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
     }
   }, [loading, value]);
 
-  if (loading) {
+  if (isActuallyLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -63,8 +81,6 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
       </div>
     );
   }
-
-  const scraps = value?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap)) || [];
 
   if (scraps.length === 0) {
     return (
@@ -112,7 +128,7 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
                 "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 sm:mb-3 leading-tight tracking-tight",
                 scrap.title.length > 40 ? "text-xs sm:text-lg" : "text-sm sm:text-xl"
               )}>
-                <TruncatedTitle title={scrap.title} limit={typeof window !== 'undefined' && window.innerWidth < 640 ? 25 : 45} />
+                <TruncatedTitle title={scrap.title} limit={windowWidth !== null && windowWidth < 640 ? 25 : 45} />
               </h3>
 
               {/* Tags */}
@@ -178,7 +194,7 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
 
                   <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
-                    {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                    {scrap.updatedAt ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
                   </span>
                   
                   <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />

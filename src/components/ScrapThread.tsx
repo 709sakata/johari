@@ -41,18 +41,23 @@ function BacklinkCard({ scrapId, commentContent, onSelectScrap }: { scrapId: str
 
   return (
     <motion.button
-      whileHover={{ y: -4, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
       onClick={() => onSelectScrap?.(scrap)}
-      className="flex flex-col gap-3 p-5 bg-white/60 backdrop-blur-md rounded-3xl border border-white/40 shadow-lg shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 transition-all text-left group"
+      className="flex flex-col gap-4 p-6 bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/40 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all text-left group relative overflow-hidden"
     >
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 via-blue-500/40 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="flex items-center gap-3">
-        <span className="text-xl group-hover:scale-110 transition-transform">{scrap.icon_emoji || '📄'}</span>
-        <span className="font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">{scrap.title}</span>
+        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+          <span className="text-xl">{scrap.icon_emoji || '📄'}</span>
+        </div>
+        <span className="font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1 text-base">{scrap.title}</span>
       </div>
-      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed opacity-60 italic">
-        &quot;{commentContent.substring(0, 100)}...&quot;
-      </p>
+      <div className="relative">
+        <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed opacity-70 italic pl-4 border-l-2 border-blue-100">
+          &quot;{commentContent.replace(/[#*_\-~\[\]\(\)>]/g, "").trim()}&quot;
+        </p>
+      </div>
     </motion.button>
   );
 }
@@ -65,12 +70,19 @@ interface ScrapThreadProps {
   onCreateScrap?: (title: string) => void;
 }
 
+const getDisplayDate = (date: any) => {
+  if (!date) return null;
+  if (typeof date.toDate === 'function') return date.toDate();
+  return new Date(date);
+};
+
 function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectUser }: { authorId: string, authorName: string, authorPhoto: string | null, createdAt: any, onSelectUser?: (userId: string) => void }) {
   const [authorDoc] = useDocument(doc(db, `users/${authorId}`));
   const bio = authorDoc?.data()?.bio;
 
   return (
-    <div className="flex flex-col items-center text-center p-8 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 transition-all hover:shadow-2xl hover:shadow-blue-500/10">
+    <div className="flex flex-col items-center text-center p-8 bg-white/60 backdrop-blur-xl rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 transition-all hover:shadow-2xl hover:shadow-blue-500/10 group/profile relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/10 via-blue-500/30 to-blue-500/10 opacity-0 group-hover/profile:opacity-100 transition-opacity" />
       <div 
         onClick={() => onSelectUser?.(authorId)}
         onKeyDown={(e) => {
@@ -80,12 +92,12 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
         }}
         role="button"
         tabIndex={0}
-        className="group flex flex-col items-center cursor-pointer focus:outline-none"
+        className="group flex flex-col items-center cursor-pointer focus:outline-none w-full"
       >
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors" />
           {authorPhoto && authorPhoto !== "" ? (
-            <div className="relative w-24 h-24 mb-6">
+            <div className="relative w-24 h-24">
               <Image 
                 src={authorPhoto} 
                 alt={authorName} 
@@ -99,17 +111,21 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
               <User className="w-12 h-12 text-gray-300" />
             </div>
           )}
+          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg group-hover:scale-110 transition-transform">
+            <User className="w-3.5 h-3.5 text-white" />
+          </div>
         </div>
         <p className="font-display font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight mb-1">{authorDoc?.data()?.displayName || authorName}</p>
         <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">作成者</p>
       </div>
       {bio && (
-        <ExpandableBio bio={bio} className="text-xs mt-4 px-2 w-full text-gray-500 leading-relaxed font-medium" />
+        <ExpandableBio bio={bio} className="text-xs mt-6 px-2 w-full text-gray-500 leading-relaxed font-medium" />
       )}
       <div className="w-12 h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent my-6" />
-      <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">
-        {createdAt ? formatDistanceToNow(createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}に作成
-      </p>
+      <div className="flex items-center gap-2 text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">
+        <Clock className="w-3 h-3" />
+        <span>{createdAt ? formatDistanceToNow(getDisplayDate(createdAt)!, { addSuffix: true, locale: ja }) : 'たった今'}に作成</span>
+      </div>
     </div>
   );
 }
@@ -176,8 +192,8 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
       "@type": "Person",
       "name": scrap.authorName
     },
-    "datePublished": scrap.createdAt?.toDate()?.toISOString(),
-    "dateModified": scrap.updatedAt?.toDate()?.toISOString(),
+    "datePublished": scrap.createdAt?.toDate?.()?.toISOString?.() || scrap.createdAt,
+    "dateModified": scrap.updatedAt?.toDate?.()?.toISOString?.() || scrap.updatedAt,
     "image": ogImage,
     "description": description
   };
@@ -537,9 +553,9 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   }`}>
                     {scrap.status === 'open' ? 'オープン' : 'クローズ'}
                   </span>
-                  <time className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5" dateTime={scrap.createdAt?.toDate().toISOString()}>
+                  <time className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5" dateTime={typeof scrap.createdAt === 'string' ? scrap.createdAt : scrap.createdAt?.toDate?.()?.toISOString?.()}>
                     <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    {scrap.createdAt ? formatDistanceToNow(scrap.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                    {scrap.createdAt ? formatDistanceToNow(getDisplayDate(scrap.createdAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
                   </time>
                   <span className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -609,15 +625,14 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
               </div>
 
               {isEditingTitle ? (
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+                  <TextareaAutosize
                     value={editedTitle}
                     onChange={(e) => setEditedTitle(e.target.value)}
-                    className="flex-1 text-xl sm:text-4xl font-display font-bold text-gray-900 leading-tight bg-white/50 border-b-4 border-blue-600 focus:outline-none px-2 py-1 rounded-t-xl"
+                    className="flex-1 w-full text-xl sm:text-4xl font-display font-bold text-gray-900 leading-tight bg-white/50 border-b-4 border-blue-600 focus:outline-none px-2 py-1 rounded-t-xl resize-none"
                     autoFocus
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || ((e.metaKey || e.ctrlKey) && e.key === 'Enter')) {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                         handleUpdateTitle();
                       }
                       if (e.key === 'Escape') {
@@ -626,11 +641,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                       }
                     }}
                   />
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-center">
                     <button
                       onClick={handleUpdateTitle}
-                      disabled={isUpdating}
-                      className="p-2 sm:p-3 text-white bg-blue-600 hover:bg-blue-700 rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-95"
+                      disabled={isUpdating || !editedTitle.trim()}
+                      className="p-2 sm:p-3 text-white bg-blue-600 hover:bg-blue-700 rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50"
+                      title="保存 (⌘+Enter)"
                     >
                       <Check className="w-5 h-5 sm:w-7 sm:h-7" />
                     </button>
@@ -640,6 +656,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                         setEditedTitle(scrap.title);
                       }}
                       className="p-2 sm:p-3 text-gray-400 hover:bg-gray-100 rounded-2xl transition-all active:scale-95"
+                      title="キャンセル (Esc)"
                     >
                       <X className="w-5 h-5 sm:w-7 sm:h-7" />
                     </button>
@@ -658,7 +675,11 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   >
                     {scrap.icon_emoji && (
                       <span className="relative inline-block mr-2 sm:mr-4 align-top">
-                        <span className="inline-block transition-transform hover:rotate-12 cursor-pointer" onClick={openEmojiPicker}>
+                        <span 
+                          className="inline-block transition-all hover:rotate-12 hover:scale-125 cursor-pointer p-2 bg-white/50 rounded-2xl border border-white/40 shadow-sm hover:shadow-md active:scale-95" 
+                          onClick={openEmojiPicker}
+                          title="絵文字を変更"
+                        >
                           {scrap.icon_emoji}
                         </span>
                         
@@ -726,33 +747,36 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
               )}
 
               {/* Tags Section */}
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 {isEditingTags ? (
-                  <div className="flex items-center gap-3 w-full max-w-md bg-gray-50 p-2 rounded-xl border border-gray-100">
-                    <Hash className="w-5 h-5 text-gray-400 ml-2" />
-                    <input
-                      type="text"
-                      value={editedTags}
-                      onChange={(e) => setEditedTags(e.target.value)}
-                      placeholder="#思考 #アイデア #メモ"
-                      className="flex-1 text-sm bg-transparent focus:outline-none py-1"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleUpdateTags();
-                        if (e.key === 'Escape') setIsEditingTags(false);
-                      }}
-                    />
-                    <div className="flex items-center gap-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full max-w-2xl">
+                    <div className="flex-1 flex items-center gap-3 w-full bg-white/50 backdrop-blur-sm p-3 rounded-2xl border border-blue-100 shadow-inner group focus-within:ring-4 focus-within:ring-blue-500/5 transition-all">
+                      <Hash className="w-5 h-5 text-blue-400 ml-1" />
+                      <input
+                        type="text"
+                        value={editedTags}
+                        onChange={(e) => setEditedTags(e.target.value)}
+                        placeholder="タグをスペース区切りで入力 (例: 思考 アイデア)"
+                        className="flex-1 text-sm bg-transparent focus:outline-none py-1 font-bold text-gray-700 placeholder:text-gray-300"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateTags();
+                          if (e.key === 'Escape') setIsEditingTags(false);
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
                       <button
                         onClick={handleUpdateTags}
                         disabled={isUpdating}
-                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
                       >
-                        <Check className="w-5 h-5" />
+                        <Check className="w-4 h-4" />
+                        <span>保存</span>
                       </button>
                       <button
                         onClick={() => setIsEditingTags(false)}
-                        className="p-2 text-gray-400 hover:bg-gray-200 rounded-lg transition-all"
+                        className="p-2.5 text-gray-400 hover:bg-gray-100 rounded-xl transition-all active:scale-95"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -1224,15 +1248,15 @@ function CommentItem({
       {/* Glass reflection effect */}
       {!isReply && <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none rounded-[2.5rem]" />}
 
-      <div className="relative z-10">
+      <div className={`relative z-10 ${isReply ? 'pl-4 border-l-2 border-gray-100' : ''}`}>
         <div className="flex items-center justify-between gap-2 mb-8">
           <button 
             onClick={() => onSelectUser?.(comment.authorId)}
-            className="flex items-center gap-4 group/author"
+            className="flex items-center gap-4 group/author min-w-0"
           >
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               {comment.authorPhoto && comment.authorPhoto !== "" ? (
-                <div className="relative w-10 h-10">
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12">
                   <Image 
                     src={comment.authorPhoto} 
                     alt={comment.authorName} 
@@ -1242,14 +1266,18 @@ function CommentItem({
                   />
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md border-2 border-white group-hover/author:scale-110 transition-all">
-                  <User className="w-5 h-5 text-gray-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white flex items-center justify-center shadow-md border-2 border-white group-hover/author:scale-110 transition-all">
+                  <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                 </div>
               )}
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                <User className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
+              </div>
             </div>
-            <div className="text-left">
-              <p className="font-display text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight leading-none mb-1.5">{comment.authorName}</p>
-              <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">
+            <div className="text-left min-w-0">
+              <p className="font-display text-sm sm:text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight leading-none mb-1.5 truncate">{comment.authorName}</p>
+              <p className="text-[9px] sm:text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
+                <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 {comment.createdAt ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
                 {comment.updatedAt && <span className="ml-2 opacity-60">(編集済み)</span>}
               </p>
