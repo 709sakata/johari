@@ -77,16 +77,17 @@ service cloud.firestore {
     }
 
     function isValidComment(data) {
-      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt', 'updatedAt', 'parentId', 'images', 'linkedTitles']) &&
+      return hasOnlyAllowedFields(data, ['content', 'authorId', 'authorName', 'authorPhoto', 'createdAt', 'updatedAt', 'parentId', 'images', 'linkedTitles', 'linkedScrapIds']) &&
              data.content is string && data.content.size() >= 0 && data.content.size() <= 200000 &&
-             data.authorId is string &&
-             data.authorName is string &&
+             data.authorId is string && data.authorId.size() > 0 &&
+             data.authorName is string && data.authorName.size() > 0 &&
              data.createdAt is timestamp &&
-             (!('parentId' in data) || data.parentId is string) &&
+             (!('parentId' in data) || (data.parentId is string && data.parentId.size() > 0)) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp) &&
              (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null)) &&
              (!('images' in data) || (data.images is map && data.images.size() <= 10)) &&
-             (!('linkedTitles' in data) || (data.linkedTitles is list && data.linkedTitles.size() <= 100));
+             (!('linkedTitles' in data) || (data.linkedTitles is list && data.linkedTitles.size() <= 100)) &&
+             (!('linkedScrapIds' in data) || (data.linkedScrapIds is list && data.linkedScrapIds.size() <= 100));
     }
 
     function isValidFeed(data) {
@@ -168,9 +169,15 @@ service cloud.firestore {
                       request.resource.data.authorId == request.auth.uid;
       allow update: if isAuthenticated() && 
                       isValidScrap(request.resource.data) && 
-                      (resource.data.authorId == request.auth.uid || isAdmin()) &&
-                      request.resource.data.authorId == resource.data.authorId &&
-                      request.resource.data.createdAt == resource.data.createdAt;
+                      (
+                        (resource.data.authorId == request.auth.uid || isAdmin()) &&
+                        request.resource.data.authorId == resource.data.authorId &&
+                        request.resource.data.createdAt == resource.data.createdAt
+                      ) || (
+                        isAuthenticated() &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'updatedAt']) &&
+                        (request.resource.data.commentCount == resource.data.commentCount + 1 || request.resource.data.commentCount == resource.data.commentCount)
+                      );
       allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
 
       match /comments/{commentId} {

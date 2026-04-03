@@ -36,9 +36,24 @@ export function extractLinkedTitles(text: string): string[] {
   const titles = [];
   for (const match of matches) {
     const title = match[1];
-    if (!title.startsWith('http://') || !title.startsWith('https://')) {
+    if (!title.startsWith('http://') && !title.startsWith('https://')) {
       titles.push(title);
     }
   }
   return [...new Set(titles)];
+}
+
+/**
+ * Extracts all linked scrap IDs from text
+ * @param text The markdown text
+ * @returns Array of scrap IDs
+ */
+export function extractLinkedScrapIds(text: string): string[] {
+  if (!text) return [];
+  const matches = text.matchAll(/\[([^\[\]]+)\]\(\/scraps\/([^)]+)\)/g);
+  const ids = [];
+  for (const match of matches) {
+    ids.push(match[2]);
+  }
+  return [...new Set(ids)];
 }

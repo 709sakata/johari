@@ -32,7 +32,7 @@ interface CommentFormProps {
   onCreateScrap?: (title: string) => void;
 }
 
-import { parseScrapboxLinks, extractLinkedTitles } from '../lib/scrapbox';
+import { parseScrapboxLinks, extractLinkedTitles, extractLinkedScrapIds } from '../lib/scrapbox';
 
 export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateScrap }: CommentFormProps) {
   const [content, setContent] = useState('');
@@ -137,8 +137,9 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
     setIsSubmitting(true);
     const path = `scraps/${scrapId}/comments`;
     
-    // Extract linked titles for Scrapbox-like features
+    // Extract linked titles and scrap IDs
     const linkedTitles = extractLinkedTitles(content);
+    const linkedScrapIds = extractLinkedScrapIds(content);
 
     try {
       // Fetch latest user profile from Firestore to ensure we have the correct name
@@ -146,7 +147,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
       const userData = userDoc.exists() ? userDoc.data() : null;
       
       const authorName = userData?.displayName || auth.currentUser.displayName || 'Anonymous';
-      const authorPhoto = userData?.photoURL || auth.currentUser.photoURL || '';
+      const authorPhoto = userData?.photoURL || auth.currentUser.photoURL || null;
 
       await addDoc(collection(db, path), {
         content: content.trim(),
@@ -155,6 +156,7 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
         authorPhoto: authorPhoto,
         createdAt: serverTimestamp(),
         linkedTitles, // Save linked titles
+        linkedScrapIds, // Save linked scrap IDs
         ...(parentId ? { parentId } : {}),
         ...(Object.keys(images).length > 0 ? { images } : {}),
       });
