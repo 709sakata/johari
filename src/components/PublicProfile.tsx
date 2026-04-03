@@ -87,9 +87,15 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
     url.toLowerCase().includes(linkSearch.toLowerCase())
   );
 
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
   const title = `${userProfile.displayName || "ユーザー"} のプロフィール | じょはり`;
   const description = userProfile.bio || `${userProfile.displayName || "ユーザー"} さんの思考の窓。じょはり で思考を整理し、対話を楽しんでいます。`;
-  const url = `${window.location.origin}/users/${userProfile.id}`;
+  const url = origin ? `${origin}/users/${userProfile.id}` : '';
 
   return (
     <div className="space-y-8">

@@ -112,7 +112,7 @@ export function ScrapList({ onSelectScrap, onSelectUser }: ScrapListProps) {
                 "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 sm:mb-3 leading-tight tracking-tight",
                 scrap.title.length > 40 ? "text-xs sm:text-lg" : "text-sm sm:text-xl"
               )}>
-                <TruncatedTitle title={scrap.title} limit={window.innerWidth < 640 ? 25 : 45} />
+                <TruncatedTitle title={scrap.title} limit={typeof window !== 'undefined' && window.innerWidth < 640 ? 25 : 45} />
               </h3>
 
               {/* Tags */}

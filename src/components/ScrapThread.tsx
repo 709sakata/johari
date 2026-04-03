@@ -156,11 +156,17 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   const scrap = scrapValue?.exists() ? ({ id: scrapValue.id, ...scrapValue.data() } as Scrap) : initialScrap;
   const allComments = useMemo(() => commentsValue?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)) || [], [commentsValue]);
   
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
   // SEO description from comments
   const seoDescription = allComments.slice(0, 5).map(c => c.content.replace(/[#*_\-~\[\]\(\)>]/g, "").replace(/\s+/g, " ").trim()).join(" ").substring(0, 160);
   const description = seoDescription || `新しいスレッド「${scrap.title}」が作成されました。`;
-  const ogImage = `${window.location.origin}/api/og-image/${scrap.id}`;
-  const url = `${window.location.origin}/scraps/${scrap.id}`;
+  const ogImage = origin ? `${origin}/api/og-image/${scrap.id}` : '';
+  const url = origin ? `${origin}/scraps/${scrap.id}` : '';
 
   const jsonLd = {
     "@context": "https://schema.org",
