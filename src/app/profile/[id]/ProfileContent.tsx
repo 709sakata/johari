@@ -6,9 +6,10 @@ import { PublicProfile } from '../../../components/PublicProfile';
 
 interface ProfileContentProps {
   id: string;
+  isEmbed?: boolean;
 }
 
-export const ProfileContent: React.FC<ProfileContentProps> = ({ id }) => {
+export const ProfileContent: React.FC<ProfileContentProps> = ({ id, isEmbed }) => {
   const router = useRouter();
 
   return (
@@ -16,6 +17,7 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({ id }) => {
       userId={id}
       onSelectScrap={(scrap) => router.push(`/scraps/${scrap.id}`)}
       onSelectUser={(userId) => router.push(`/profile/${userId}`)}
+      isEmbed={isEmbed}
     />
   );
 };

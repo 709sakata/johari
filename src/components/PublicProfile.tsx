@@ -18,9 +18,10 @@ interface PublicProfileProps {
   userId: string;
   onSelectScrap: (scrap: Scrap) => void;
   onSelectUser: (userId: string) => void;
+  isEmbed?: boolean;
 }
 
-export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicProfileProps) {
+export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed }: PublicProfileProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [origin, setOrigin] = useState('');
@@ -94,12 +95,15 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
 
   const title = `${userProfile.displayName || "ユーザー"} のプロフィール | じょはり`;
   const description = userProfile.bio || `${userProfile.displayName || "ユーザー"} さんの思考の窓。じょはり で思考を整理し、対話を楽しんでいます。`;
-  const url = origin ? `${origin}/users/${userProfile.id}` : '';
+  const url = origin ? `${origin}/profile/${userProfile.id}` : '';
 
   return (
-    <div className="space-y-8">
+    <div className={cn("space-y-8", isEmbed && "space-y-4")}>
       {/* Profile Header */}
-      <div className="glass p-5 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/5 relative overflow-hidden group">
+      <div className={cn(
+        "glass p-5 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/5 relative overflow-hidden group",
+        isEmbed && "p-4 sm:p-6 rounded-2xl shadow-none border-none bg-transparent"
+      )}>
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
         
         <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-12 text-center sm:text-left">
@@ -171,13 +175,15 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser }: PublicPro
       </div>
 
       {/* Scraps Section */}
-      <div className="space-y-8">
-        <h3 className="font-display text-2xl font-bold text-gray-900 flex items-center gap-4 ml-2 tracking-tight">
-          <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-            <MessageSquare className="w-5 h-5 text-white" />
-          </div>
-          スレッド一覧
-        </h3>
+      <div className={cn("space-y-8", isEmbed && "space-y-4")}>
+        {!isEmbed && (
+          <h3 className="font-display text-2xl font-bold text-gray-900 flex items-center gap-4 ml-2 tracking-tight">
+            <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+              <MessageSquare className="w-5 h-5 text-white" />
+            </div>
+            スレッド一覧
+          </h3>
+        )}
         
         <div className="space-y-0">
           {loading ? (

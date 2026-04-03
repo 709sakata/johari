@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -60,8 +61,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function ProfilePage({ params }: PageProps) {
+export default async function ProfilePage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { embed } = await searchParams;
+  const isEmbed = embed === 'true';
 
   // Fetch data for JSON-LD
   let userData: UserProfile | null = null;
@@ -86,18 +89,18 @@ export default async function ProfilePage({ params }: PageProps) {
   } : null;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${isEmbed ? 'bg-transparent' : ''}`}>
       {jsonLd && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <Header />
-      <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
-        <ProfileContent id={id} />
+      {!isEmbed && <Header />}
+      <main className={`flex-grow w-full ${isEmbed ? 'p-0' : 'max-w-6xl mx-auto px-4 py-8'}`}>
+        <ProfileContent id={id} isEmbed={isEmbed} />
       </main>
-      <Footer />
+      {!isEmbed && <Footer />}
     </div>
   );
 }
