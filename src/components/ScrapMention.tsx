@@ -38,7 +38,7 @@ export function ScrapMention({ scrapId, className, onClick }: ScrapMentionProps)
     <span 
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 backdrop-blur-sm text-blue-700 rounded-xl border border-blue-100/50 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 group",
+        "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 backdrop-blur-sm text-blue-700 rounded-xl border border-blue-100/50 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer active:scale-95 group",
         className
       )}
     >

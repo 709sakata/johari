@@ -116,8 +116,8 @@ export function ScrapList({ onSelectScrap, onSelectUser, initialScraps }: ScrapL
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
             
             {/* Left Side: Emoji Block (Rounded Rectangle) */}
-            <div className="w-14 h-14 sm:w-32 sm:h-32 bg-slate-50 rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 group-hover:bg-blue-50 shadow-inner">
-              <span className="text-2xl sm:text-5xl select-none filter drop-shadow-sm transition-transform group-hover:rotate-12">
+            <div className="w-14 h-14 sm:w-32 sm:h-32 bg-slate-50 rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105 group-hover:bg-blue-50">
+              <span className="text-2xl sm:text-5xl select-none transition-transform group-hover:rotate-12">
                 {scrap.icon_emoji || '📄'}
               </span>
             </div>

@@ -31,7 +31,6 @@ import { DIVERSE_EMOJIS } from '../constants/emojis';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { parseScrapboxLinks } from '../lib/scrapbox';
 import { ScrapLink } from './ScrapLink';
-import { LatestScrapsSidebar } from './LatestScrapsSidebar';
 
 function BacklinkCard({ scrapId, commentContent, onSelectScrap }: { scrapId: string, commentContent: string, onSelectScrap?: (scrap: Scrap) => void }) {
   const [scrapValue] = useDocument(doc(db, 'scraps', scrapId));
@@ -111,9 +110,6 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
               <User className="w-12 h-12 text-gray-300" />
             </div>
           )}
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg group-hover:scale-110 transition-transform">
-            <User className="w-3.5 h-3.5 text-white" />
-          </div>
         </div>
         <p className="font-display font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight mb-1">{authorDoc?.data()?.displayName || authorName}</p>
         <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">作成者</p>
@@ -676,7 +672,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                     {scrap.icon_emoji && (
                       <span className="relative inline-block mr-2 sm:mr-4 align-top">
                         <span 
-                          className="inline-block transition-all hover:rotate-12 hover:scale-125 cursor-pointer p-2 bg-white/50 rounded-2xl border border-white/40 shadow-sm hover:shadow-md active:scale-95" 
+                          className="inline-block transition-all hover:rotate-12 hover:scale-125 cursor-pointer p-2 bg-white/50 rounded-2xl active:scale-95" 
                           onClick={openEmojiPicker}
                           title="絵文字を変更"
                         >
@@ -984,15 +980,9 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             </div>
           </div>
 
-          {/* Latest Scraps Sidebar */}
-          <LatestScrapsSidebar 
-            currentScrapId={scrap.id} 
-            onSelectScrap={onSelectScrap} 
-          />
-
           {/* Table of Contents (Hierarchical) */}
           {parentComments.length > 0 && (
-            <div className="sticky top-20 glass rounded-[2.5rem] p-6 space-y-4 flex flex-col min-h-[calc(100vh-100px)] max-h-[calc(100vh-100px)]">
+            <div className="sticky top-20 glass rounded-[2.5rem] p-6 space-y-4 flex flex-col max-h-[calc(100vh-100px)]">
               <div className="flex items-center justify-between gap-2 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <List className="w-4 h-4 text-blue-600" />
@@ -1270,9 +1260,6 @@ function CommentItem({
                   <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                 </div>
               )}
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                <User className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
-              </div>
             </div>
             <div className="text-left min-w-0">
               <p className="font-display text-sm sm:text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight leading-none mb-1.5 truncate">{comment.authorName}</p>

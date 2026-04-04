@@ -131,9 +131,6 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed, in
                 <User className="w-10 h-10 sm:w-20 sm:h-20 text-gray-300" />
               </div>
             )}
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-12 sm:h-12 bg-blue-600 rounded-lg sm:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20 border-2 border-white">
-              <User className="w-3 h-3 sm:w-6 sm:h-6" />
-            </div>
           </div>
 
           {/* Info Area */}
@@ -221,7 +218,7 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed, in
                     className="group relative w-full p-3 sm:p-5 bg-white/60 backdrop-blur-md hover:bg-white rounded-[1.5rem] sm:rounded-[2.5rem] border border-white/40 hover:border-blue-200 transition-all cursor-pointer overflow-hidden flex items-center gap-3 sm:gap-6 hover:shadow-2xl hover:-translate-y-1 shadow-xl shadow-blue-500/5"
                   >
                     {/* Left Side: Emoji Block */}
-                    <div className="w-14 h-14 sm:w-28 sm:h-28 bg-white rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:bg-blue-50 shadow-sm border border-gray-50">
+                    <div className="w-14 h-14 sm:w-28 sm:h-28 bg-white rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:bg-blue-50">
                       <span className="text-2xl sm:text-5xl select-none transform transition-transform duration-500 group-hover:rotate-12">
                         {scrap.icon_emoji || '📄'}
                       </span>

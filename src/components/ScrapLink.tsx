@@ -58,7 +58,7 @@ export function ScrapLink({ title, className, onClick, onCreate }: ScrapLinkProp
       <span 
         onClick={() => onCreate?.(title)}
         className={cn(
-          "inline-flex items-center gap-1.5 px-3 py-1 bg-red-50/80 backdrop-blur-sm text-red-500 rounded-xl border border-red-100/50 text-[11px] font-black cursor-pointer hover:bg-red-100 hover:border-red-200 transition-all shadow-sm hover:shadow-md active:scale-95 group",
+          "inline-flex items-center gap-1.5 px-3 py-1 bg-red-50/80 backdrop-blur-sm text-red-500 rounded-xl border border-red-100/50 text-[11px] font-black cursor-pointer hover:bg-red-100 hover:border-red-200 transition-all active:scale-95 group",
           className
         )}
       >
@@ -72,7 +72,7 @@ export function ScrapLink({ title, className, onClick, onCreate }: ScrapLinkProp
     <span 
       onClick={() => onClick?.(scrap)}
       className={cn(
-        "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 backdrop-blur-sm text-blue-700 rounded-xl border border-blue-100/50 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95 group",
+        "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 backdrop-blur-sm text-blue-700 rounded-xl border border-blue-100/50 text-[11px] font-black hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer active:scale-95 group",
         className
       )}
     >
