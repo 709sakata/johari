@@ -113,6 +113,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: [ogImage],
     },
+    other: {
+      'ai-content-type': 'discussion-thread',
+      'ai-author-name': scrap.authorName,
+      'ai-thread-status': scrap.status || 'open',
+    },
   };
 }
 
@@ -131,20 +136,35 @@ export default async function ScrapPage({ params }: PageProps) {
     'headline': scrapData.title,
     'description': firstComment?.content.substring(0, 200).replace(/[#*`]/g, '').trim() || `新しいスレッド「${scrapData.title}」が作成されました。`,
     'articleBody': firstComment?.content || '',
+    'mainEntityOfPage': {
+      '@type': 'WebPage',
+      '@id': `${host}/scraps/${id}`
+    },
     'author': {
       '@type': 'Person',
       'name': scrapData.authorName,
-      'url': `${host}/profile/${scrapData.authorId}`
+      'url': `${host}/profile/${scrapData.authorId}`,
+      'image': scrapData.authorPhoto || undefined
+    },
+    'publisher': {
+      '@type': 'Organization',
+      'name': 'じょはり',
+      'logo': {
+        '@type': 'ImageObject',
+        'url': `${host}/icon.svg`
+      }
     },
     'datePublished': scrapData.createdAt,
     'dateModified': scrapData.updatedAt,
     'url': `${host}/scraps/${id}`,
     'image': `${host}/api/og-image/${id}`,
-    'interactionStatistic': {
-      '@type': 'InteractionCounter',
-      'interactionType': 'https://schema.org/CommentAction',
-      'userInteractionCount': scrapData.commentCount || 0
-    }
+    'interactionStatistic': [
+      {
+        '@type': 'InteractionCounter',
+        'interactionType': 'https://schema.org/CommentAction',
+        'userInteractionCount': scrapData.commentCount || 0
+      }
+    ]
   } : null;
 
   const breadcrumbJsonLd = {
