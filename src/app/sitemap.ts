@@ -1,44 +1,32 @@
 import { MetadataRoute } from 'next';
-import { db, collection, getDocs, query, orderBy, limit } from '../firebase';
-import { Scrap } from '../types';
+import { db, collection, getDocs, query, orderBy } from '../firebase';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
-  
-  // 1. Static routes
-  const staticRoutes = [
-    '',
-    '/analytics',
-    '/mypage',
-    '/new-scrap',
-  ].map(route => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: route === '' ? 1 : 0.8,
-  }));
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
 
-  // 2. Dynamic scrap routes
-  let scrapRoutes: MetadataRoute.Sitemap = [];
+  // Fetch all scraps to include in sitemap
+  let scrapUrls: any[] = [];
   try {
-    const q = query(
-      collection(db, 'scraps'),
-      orderBy('updatedAt', 'desc'),
-      limit(500) // Increase limit for better coverage
-    );
-    const snapshot = await getDocs(q);
-    scrapRoutes = snapshot.docs.map(doc => {
-      const data = doc.data() as Scrap;
-      return {
-        url: `${baseUrl}/scraps/${doc.id}`,
-        lastModified: data.updatedAt?.toDate() || new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.6,
-      };
-    });
-  } catch (error) {
-    console.error('Sitemap generation error:', error);
+    const scrapsQuery = query(collection(db, 'scraps'), orderBy('updatedAt', 'desc'));
+    const scrapsSnapshot = await getDocs(scrapsQuery);
+    
+    scrapUrls = scrapsSnapshot.docs.map((doc) => ({
+      url: `${host}/scraps/${doc.id}`,
+      lastModified: doc.data().updatedAt?.toDate() || new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8,
+    }));
+  } catch (e) {
+    console.error('Error fetching scraps for sitemap:', e);
   }
 
-  return [...staticRoutes, ...scrapRoutes];
+  return [
+    {
+      url: host,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 1,
+    },
+    ...scrapUrls,
+  ];
 }

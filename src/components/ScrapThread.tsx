@@ -538,7 +538,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             </div>
           </aside>
 
-          <section className="glass p-6 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10">
+          <article className="glass p-6 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10">
             <header className="mb-8 sm:mb-10">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -841,7 +841,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 </div>
               </div>
             </div>
-          </section>
+          </article>
 
           {loading ? (
             <div className="flex justify-center py-12">
@@ -850,7 +850,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
           ) : error ? (
             <div className="p-4 bg-red-50 text-red-600 rounded-xl text-sm">{error.message}</div>
           ) : (
-            <div className="space-y-4">
+            <section className="space-y-4" aria-label="コメント一覧">
               {parentComments.map((comment, index) => (
                 <CommentItem
                   key={comment.id}
@@ -874,7 +874,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                   onCreateScrap={onCreateScrap}
                 />
               ))}
-            </div>
+            </section>
           )}
 
             {scrap.status === 'open' ? (
@@ -1224,7 +1224,7 @@ function CommentItem({
   };
 
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
@@ -1265,7 +1265,9 @@ function CommentItem({
               <p className="font-display text-sm sm:text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight leading-none mb-1.5 truncate">{comment.authorName}</p>
               <p className="text-[9px] sm:text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
                 <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                {comment.createdAt ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                <time dateTime={comment.createdAt ? comment.createdAt.toDate().toISOString() : undefined}>
+                  {comment.createdAt ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                </time>
                 {comment.updatedAt && <span className="ml-2 opacity-60">(編集済み)</span>}
               </p>
             </div>
@@ -1539,6 +1541,6 @@ function CommentItem({
           ))}
         </div>
       )}
-    </motion.div>
+    </motion.article>
   );
 }
