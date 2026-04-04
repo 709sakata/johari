@@ -34,7 +34,7 @@ const getInitialScraps = cache(async () => {
 });
 
 export default async function HomePage() {
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
   const initialScraps = await getInitialScraps();
   
   const jsonLd = {

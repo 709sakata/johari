@@ -72,7 +72,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
   const userData = await getCachedUserData(id);
 
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
   const jsonLd = userData ? {
     '@context': 'https://schema.org',
     '@type': 'Person',

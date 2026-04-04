@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud'),
   title: {
     default: 'じょはり | まだ知らない自分に出会う思考の窓',
     template: '%s | じょはり',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     title: 'じょはり | まだ知らない自分に出会う思考の窓',
     description: 'じょはり は、あなたの思考を整理し、他者との対話を通じて「未知の自分」を発見するための場所です。',
     images: ['/og-image.png'],
-    creator: '@johari_app',
+    creator: '@johari_cloud',
   },
   robots: {
     index: true,

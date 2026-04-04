@@ -5,7 +5,7 @@ import { Scrap } from '../../types';
 
 export async function GET(request: Request) {
   try {
-    const host = request.headers.get('host') || 'johari.app';
+    const host = request.headers.get('host') || 'johari.cloud';
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
 
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       },
       author: {
         name: "じょはり Community",
-        email: "noreply@johari.app"
+        email: "noreply@johari.cloud"
       }
     });
 
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
         author: [
           {
             name: data.authorName,
-            email: "noreply@johari.app"
+            email: "noreply@johari.cloud"
           }
         ],
         date: updatedAt,

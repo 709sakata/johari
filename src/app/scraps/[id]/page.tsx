@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? plainContent.substring(0, 160) + (plainContent.length > 160 ? '...' : '')
     : `新しいスレッド「${scrap.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`;
   
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
   const ogImage = `${host}/api/og-image/${id}`;
 
   return {
@@ -123,7 +123,7 @@ export default async function ScrapPage({ params }: PageProps) {
   const scrapData = data?.scrap || null;
   const firstComment = data?.firstComment || null;
 
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.app';
+  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
   
   const jsonLd = scrapData ? {
     '@context': 'https://schema.org',
