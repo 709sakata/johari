@@ -101,6 +101,7 @@ function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectU
                 src={authorPhoto} 
                 alt={authorName} 
                 fill
+                sizes="96px"
                 className="rounded-full border-4 border-white shadow-2xl group-hover:scale-105 transition-all duration-500 ease-out object-cover" 
                 referrerPolicy="no-referrer" 
               />
@@ -538,8 +539,8 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
             </div>
           </aside>
 
-          <article className="glass p-6 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-2xl shadow-blue-500/10">
-            <header className="mb-8 sm:mb-10">
+          <article className="p-0 sm:p-4 mb-4">
+            <header className="mb-6 sm:mb-8">
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <span className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] rounded-full border ${
@@ -575,6 +576,26 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                           exit={{ opacity: 0, scale: 0.95, y: 10 }}
                           className="absolute right-0 mt-3 w-56 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 py-3 z-10"
                         >
+                          <button
+                            onClick={() => {
+                              setShowMenu(false);
+                              setIsEditingTitle(true);
+                            }}
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            タイトルを編集
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowMenu(false);
+                              setIsEditingTags(true);
+                            }}
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                          >
+                            <Hash className="w-4 h-4" />
+                            タグを編集
+                          </button>
                           <button
                             onClick={toggleStatus}
                             disabled={isUpdating}
@@ -794,53 +815,10 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                         <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest italic">タグなし</span>
                       )
                     )}
-                    {isAuthor && (
-                      <button
-                        onClick={() => setIsEditingTags(true)}
-                        className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                        title="タグを編集"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    )}
                   </>
                 )}
               </div>
             </header>
-
-            <div className="flex items-center gap-4 pt-8 border-t border-gray-50">
-              <div 
-                onClick={() => onSelectUser?.(scrap.authorId)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    onSelectUser?.(scrap.authorId);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                className="flex items-center gap-4 group/author w-full max-w-full min-w-0 cursor-pointer focus:outline-none"
-              >
-                {scrap.authorPhoto && scrap.authorPhoto !== "" ? (
-                  <div className="relative w-12 h-12">
-                    <Image 
-                      src={scrap.authorPhoto} 
-                      alt={scrap.authorName} 
-                      fill
-                      className="rounded-full border-2 border-white shadow-md group-hover:scale-110 transition-all object-cover" 
-                      referrerPolicy="no-referrer" 
-                    />
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-all shadow-md border-2 border-white">
-                    <User className="w-6 h-6 text-gray-400" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-base font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight">{scrap.authorName}</p>
-                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-0.5">作成者</p>
-                </div>
-              </div>
-            </div>
           </article>
 
           {loading ? (
@@ -1251,6 +1229,7 @@ function CommentItem({
                     src={comment.authorPhoto} 
                     alt={comment.authorName} 
                     fill
+                    sizes="(max-width: 640px) 40px, 48px"
                     className="rounded-full border-2 border-white shadow-md group-hover/author:scale-110 transition-all object-cover" 
                     referrerPolicy="no-referrer" 
                   />

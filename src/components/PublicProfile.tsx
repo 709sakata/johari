@@ -122,6 +122,7 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed, in
                   src={userProfile.photoURL} 
                   alt={userProfile.displayName || ''} 
                   fill
+                  sizes="(max-width: 640px) 80px, 160px"
                   className="rounded-[1.5rem] sm:rounded-[3rem] shadow-2xl border-4 border-white object-cover transition-all duration-500 group-hover/avatar:scale-105 group-hover/avatar:rotate-3" 
                   referrerPolicy="no-referrer" 
                 />

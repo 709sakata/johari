@@ -131,6 +131,7 @@ export function Auth({ onMyPageClick }: AuthProps) {
                 src={user.photoURL} 
                 alt={user.displayName || ''} 
                 fill
+                sizes="36px"
                 className="rounded-full border-2 border-white shadow-sm hover:border-blue-100 transition-all object-cover" 
                 referrerPolicy="no-referrer" 
               />

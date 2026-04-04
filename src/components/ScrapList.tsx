@@ -165,6 +165,7 @@ export function ScrapList({ onSelectScrap, onSelectUser, initialScraps }: ScrapL
                         src={scrap.authorPhoto} 
                         alt={scrap.authorName} 
                         fill
+                        sizes="(max-width: 640px) 24px, 28px"
                         className="rounded-full shadow-md border-2 border-white group-hover/author:scale-110 transition-transform object-cover" 
                         referrerPolicy="no-referrer" 
                       />
