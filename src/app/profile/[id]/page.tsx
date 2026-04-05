@@ -62,6 +62,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: [data.photoURL || ''],
     },
+    other: {
+      'ai-content-type': 'user-profile',
+      'ai-author-name': data.displayName || 'ユーザー',
+      'ai-context': 'johari-window-user-profile',
+    },
   };
 }
 
@@ -80,7 +85,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     'description': userData.bio,
     'image': userData.photoURL,
     'url': `${host}/profile/${id}`,
-    'sameAs': userData.links || []
+    'sameAs': userData.links || [],
+    'mainEntityOfPage': {
+      '@type': 'WebPage',
+      '@id': `${host}/profile/${id}`
+    }
   } : null;
 
   return (

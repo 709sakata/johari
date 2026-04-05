@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db, collection, collectionGroup, query, orderBy, auth, setDoc, doc, getDoc, getDocs, serverTimestamp, writeBatch, updateProfile } from '../firebase';
 import { where } from 'firebase/firestore';
 import { useCollection, useDocumentData } from 'react-firebase-hooks/firestore';
 import { Scrap, User as UserProfile, UserLink } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download } from 'lucide-react';
+import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download, ChevronDown, FileText } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -46,6 +46,18 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
   const [newLinkInput, setNewLinkInput] = useState('');
   const [isLinksDialogOpen, setIsLinksDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -248,6 +260,66 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
       toast.error('エクスポートに失敗しました', { id: toastId });
     } finally {
       setIsExporting(false);
+      setShowExportMenu(false);
+    }
+  };
+
+  const handleExportMarkdown = async () => {
+    if (!authUser || isExporting) return;
+    setIsExporting(true);
+    const toastId = toast.loading('Markdownをエクスポート中...');
+
+    try {
+      let markdown = `# じょはり エクスポート (${new Date().toLocaleDateString('ja-JP')})\n\n`;
+      markdown += `ユーザー: ${profile?.displayName || authUser.displayName}\n`;
+      if (profile?.bio) markdown += `自己紹介: ${profile.bio}\n`;
+      markdown += `\n---\n\n`;
+
+      for (const scrap of allScraps) {
+        const commentsQuery = query(collection(db, 'scraps', scrap.id, 'comments'), orderBy('createdAt', 'asc'));
+        const commentsSnapshot = await getDocs(commentsQuery);
+        
+        markdown += `# ${scrap.icon_emoji || '📄'} ${scrap.title}\n`;
+        markdown += `- ステータス: ${scrap.status === 'open' ? 'Open' : 'Closed'}\n`;
+        if (scrap.tags && scrap.tags.length > 0) {
+          markdown += `- タグ: ${scrap.tags.map(t => `#${t}`).join(' ')}\n`;
+        }
+        markdown += `- 作成日: ${scrap.createdAt?.toDate().toLocaleString('ja-JP')}\n\n`;
+        
+        if (scrap.content) {
+          markdown += `${scrap.content}\n\n`;
+        }
+
+        if (commentsSnapshot.docs.length > 0) {
+          markdown += `## コメント\n\n`;
+          for (const doc of commentsSnapshot.docs) {
+            const data = doc.data();
+            const date = data.createdAt?.toDate().toLocaleString('ja-JP') || '不明';
+            markdown += `### ${data.authorName} (${date})\n`;
+            markdown += `${data.content}\n\n`;
+          }
+        }
+        
+        markdown += `\n---\n\n`;
+      }
+
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `johari-export-${new Date().toISOString().split('T')[0]}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Markdownエクスポートが完了しました', { id: toastId });
+    } catch (error) {
+      console.error('Markdown export error:', error);
+      toast.error('エクスポートに失敗しました', { id: toastId });
+    } finally {
+      setIsExporting(false);
+      setShowExportMenu(false);
     }
   };
 
@@ -554,19 +626,47 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
               </button>
             </div>
 
-            <button
-              onClick={handleExportJSON}
-              disabled={isExporting}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-2 sm:px-4 sm:py-2.5 bg-white border border-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
-              title="データをJSONでエクスポート"
-            >
-              {isExporting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Download className="w-3.5 h-3.5" />
-              )}
-              <span className="hidden sm:inline">JSON出力</span>
-            </button>
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={isExporting}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-2 sm:px-4 sm:py-2.5 bg-white border border-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden sm:inline">エクスポート</span>
+                <ChevronDown className={cn("w-3 h-3 transition-transform", showExportMenu && "rotate-180")} />
+              </button>
+
+              <AnimatePresence>
+                {showExportMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute right-0 mt-2 w-48 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/40 py-2 z-20"
+                  >
+                    <button
+                      onClick={handleExportJSON}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                    >
+                      <Code className="w-4 h-4" />
+                      JSONで出力
+                    </button>
+                    <button
+                      onClick={handleExportMarkdown}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Markdownで出力
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         
           {loading ? (

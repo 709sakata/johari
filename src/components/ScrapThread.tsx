@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import TextareaAutosize from 'react-textarea-autosize';
 import Image from 'next/image';
-import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy, Hash } from 'lucide-react';
+import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy, Hash, Download, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkEmoji from 'remark-emoji';
@@ -443,8 +443,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
     }
   };
 
-  const copyThreadAsMarkdown = () => {
-    setShowMenu(false);
+  const generateMarkdown = () => {
     const scrapDate = scrap.createdAt ? scrap.createdAt.toDate().toLocaleString('ja-JP') : '不明';
     let markdown = `# ${scrap.icon_emoji || ''} ${scrap.title}\n`;
     markdown += `Author: ${scrap.authorName}\n`;
@@ -464,12 +463,32 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
       markdown += `${comment.content}\n\n`;
       markdown += `---\n\n`;
     });
+    return markdown.trim();
+  };
 
-    navigator.clipboard.writeText(markdown.trim()).then(() => {
+  const copyThreadAsMarkdown = () => {
+    setShowMenu(false);
+    const markdown = generateMarkdown();
+    navigator.clipboard.writeText(markdown).then(() => {
       toast.success('スレッド全体をMarkdownとしてコピーしました');
     }).catch(() => {
       toast.error('コピーに失敗しました');
     });
+  };
+
+  const downloadThreadAsMarkdown = () => {
+    setShowMenu(false);
+    const markdown = generateMarkdown();
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${scrap.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Markdownファイルをダウンロードしました');
   };
 
   const excerpt = (text: string) => {
@@ -604,12 +623,24 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                             {scrap.status === 'open' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                             {scrap.status === 'open' ? 'スレッドを閉じる' : 'スレッドを再開する'}
                           </button>
+                          
+                          <div className="my-2 border-t border-gray-50" />
+                          <p className="px-5 py-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">エクスポート</p>
+                          
                           <button
                             onClick={copyThreadAsMarkdown}
                             className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
                           >
                             <Copy className="w-4 h-4" />
                             Markdownでコピー
+                          </button>
+                          
+                          <button
+                            onClick={downloadThreadAsMarkdown}
+                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
+                          >
+                            <Download className="w-4 h-4" />
+                            Markdownでダウンロード
                           </button>
                           <button
                             onClick={(e) => {

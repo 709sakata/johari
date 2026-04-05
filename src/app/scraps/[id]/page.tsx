@@ -29,21 +29,25 @@ const getCachedScrapData = cache(async (id: string) => {
       updatedAt: data.updatedAt?.toDate().toISOString(),
     } as any;
     
-    let firstComment: any = null;
+    let comments: any[] = [];
     const commentsQuery = query(
       collection(db, 'scraps', id, 'comments'),
       orderBy('createdAt', 'asc'),
-      limit(1)
+      limit(10) // Fetch top 10 comments for AI context
     );
     const commentsSnapshot = await getDocs(commentsQuery);
     if (!commentsSnapshot.empty) {
-      const cData = commentsSnapshot.docs[0].data();
-      firstComment = {
-        ...cData,
-        id: commentsSnapshot.docs[0].id,
-        createdAt: (cData as any).createdAt?.toDate().toISOString(),
-      };
+      comments = commentsSnapshot.docs.map(doc => {
+        const cData = doc.data();
+        return {
+          ...cData,
+          id: doc.id,
+          createdAt: (cData as any).createdAt?.toDate().toISOString(),
+        };
+      });
     }
+    
+    const firstComment = comments.length > 0 ? comments[0] : null;
     
     // Fetch related scraps based on tags
     let relatedScraps: any[] = [];
@@ -64,7 +68,7 @@ const getCachedScrapData = cache(async (id: string) => {
       }
     }
     
-    return { scrap, firstComment, relatedScraps };
+    return { scrap, firstComment, comments, relatedScraps };
   } catch (e) {
     console.error('Error fetching scrap data:', e);
     return null;
@@ -117,6 +121,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       'ai-content-type': 'discussion-thread',
       'ai-author-name': scrap.authorName,
       'ai-thread-status': scrap.status || 'open',
+      'ai-comment-count': scrap.commentCount?.toString() || '0',
+      'ai-last-updated': scrap.updatedAt,
+      'ai-context': 'johari-window-thinking-process',
     },
   };
 }
@@ -127,6 +134,7 @@ export default async function ScrapPage({ params }: PageProps) {
   const data = await getCachedScrapData(id);
   const scrapData = data?.scrap || null;
   const firstComment = data?.firstComment || null;
+  const comments = data?.comments || [];
 
   const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
   
@@ -149,6 +157,7 @@ export default async function ScrapPage({ params }: PageProps) {
     'publisher': {
       '@type': 'Organization',
       'name': 'じょはり',
+      'url': host,
       'logo': {
         '@type': 'ImageObject',
         'url': `${host}/icon.svg`
@@ -158,13 +167,23 @@ export default async function ScrapPage({ params }: PageProps) {
     'dateModified': scrapData.updatedAt,
     'url': `${host}/scraps/${id}`,
     'image': `${host}/api/og-image/${id}`,
+    'keywords': scrapData.tags?.join(', '),
     'interactionStatistic': [
       {
         '@type': 'InteractionCounter',
         'interactionType': 'https://schema.org/CommentAction',
         'userInteractionCount': scrapData.commentCount || 0
       }
-    ]
+    ],
+    'comment': comments.slice(1).map((c: any) => ({
+      '@type': 'Comment',
+      'author': {
+        '@type': 'Person',
+        'name': c.authorName
+      },
+      'text': c.content,
+      'datePublished': c.createdAt
+    }))
   } : null;
 
   const breadcrumbJsonLd = {
