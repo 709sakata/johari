@@ -12,12 +12,15 @@ import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string[] }>;
 }
 
 // Cache the scrap data fetching to avoid redundant calls between metadata and page
-const getCachedScrapData = cache(async (id: string) => {
+const getCachedScrapData = cache(async (idArray: string[]) => {
   try {
+    const id = idArray[0];
+    if (!id) return null;
+    
     const scrapDoc = await getDocClient(doc(db, 'scraps', id));
     if (!scrapDoc.exists()) return null;
     
@@ -76,9 +79,10 @@ const getCachedScrapData = cache(async (id: string) => {
 });
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { id: idArray } = await params;
+  const id = idArray[0];
   
-  const data = await getCachedScrapData(id);
+  const data = await getCachedScrapData(idArray);
   
   if (!data) {
     return {
@@ -129,9 +133,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ScrapPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: idArray } = await params;
+  const id = idArray[0];
 
-  const data = await getCachedScrapData(id);
+  const data = await getCachedScrapData(idArray);
   const scrapData = data?.scrap || null;
   const firstComment = data?.firstComment || null;
   const comments = data?.comments || [];

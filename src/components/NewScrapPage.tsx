@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { db, auth, collection, addDoc, serverTimestamp, doc, getDoc } from '../firebase';
+import { db, auth, collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
+import { generateEmbedding, combineContext } from '../lib/embeddings';
 import { Plus, Loader2, ArrowLeft, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -56,6 +57,20 @@ export function NewScrapPage({ onClose, onSuccess, initialTitle = '' }: NewScrap
         icon_emoji: randomEmoji,
         tags: tags,
       });
+
+      // Generate embedding in the background to not block UI success state
+      // but we await it here for simplicity in this version
+      try {
+        const context = combineContext([title.trim(), ...tags]);
+        const embedding = await generateEmbedding(context);
+        if (embedding.length > 0) {
+          await updateDoc(docRef, { embedding });
+        }
+      } catch (embErr) {
+        console.error('Failed to generate embedding for new scrap:', embErr);
+        // We don't fail the whole creation if embedding fails
+      }
+
       setTitle('');
       setTagsInput('');
       logActivity(ActivityType.ACTION, undefined, 'create_scrap', { title: title.trim(), scrapId: docRef.id, tags });

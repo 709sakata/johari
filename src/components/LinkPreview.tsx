@@ -68,6 +68,7 @@ export function LinkPreview({ url }: { url: string }) {
               src={displayData.image} 
               alt={displayTitle} 
               fill
+              unoptimized
               sizes="(max-width: 640px) 100vw, 192px"
               className="object-cover group-hover:scale-105 transition-transform duration-500"
               referrerPolicy="no-referrer"

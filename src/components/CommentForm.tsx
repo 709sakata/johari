@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { db, auth, collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from '../firebase';
+import { db, auth, collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc, getDocs, query, orderBy } from '../firebase';
 import { OperationType } from '../types';
 import { handleFirestoreError } from '../lib/firestore';
+import { generateEmbedding, combineContext } from '../lib/embeddings';
 import { Send, Loader2, Eye, Edit3, Image as ImageIcon, X, Hash, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import TextareaAutosize from 'react-textarea-autosize';
@@ -162,10 +163,35 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
       });
 
       // Update scrap comment count
-      await updateDoc(doc(db, 'scraps', scrapId), {
+      const scrapRef = doc(db, 'scraps', scrapId);
+      await updateDoc(scrapRef, {
         commentCount: increment(1),
         updatedAt: serverTimestamp()
       });
+
+      // Update scrap embedding with new context
+      try {
+        const scrapDoc = await getDoc(scrapRef);
+        if (scrapDoc.exists()) {
+          const scrapData = scrapDoc.data();
+          const commentsQuery = query(collection(db, `scraps/${scrapId}/comments`), orderBy('createdAt', 'asc'));
+          const commentsSnapshot = await getDocs(commentsQuery);
+          const commentTexts = commentsSnapshot.docs.map(d => d.data().content);
+          
+          const context = combineContext([
+            scrapData.title,
+            ...(scrapData.tags || []),
+            ...commentTexts
+          ]);
+          
+          const embedding = await generateEmbedding(context);
+          if (embedding.length > 0) {
+            await updateDoc(scrapRef, { embedding });
+          }
+        }
+      } catch (embErr) {
+        console.error('Failed to update scrap embedding after comment:', embErr);
+      }
 
       setContent('');
       setImages({});

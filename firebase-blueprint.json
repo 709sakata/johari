@@ -13,7 +13,12 @@
           "items": { "type": "string" },
           "description": "A list of URLs related to the user (supports 100+ links)."
         },
-        "updatedAt": { "type": "string", "format": "date-time", "description": "The last update timestamp." }
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The last update timestamp." },
+        "embedding": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "The vector embedding of the user's profile (bio + links)."
+        }
       },
       "required": ["displayName", "updatedAt"]
     },
@@ -34,6 +39,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "User-defined tags for the scrap"
+        },
+        "embedding": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "The vector embedding of the scrap (title + content)."
         }
       },
       "required": ["title", "status", "authorId", "authorName", "createdAt", "updatedAt"]

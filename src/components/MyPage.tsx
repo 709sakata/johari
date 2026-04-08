@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ScrapStats } from './ScrapStats';
 import { LinksDialog } from './LinksDialog';
 import { safeStringify } from '../lib/firestore';
+import { generateProfileEmbedding } from '../lib/embeddings';
 
 interface MyPageProps {
   onSelectScrap: (scrap: Scrap) => void;
@@ -76,12 +77,23 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
       const cleanedLinks = editLinks.filter(l => l.trim() !== '');
       
       // 1. Update user profile in Firestore
-      await setDoc(doc(db, 'users', authUser.uid), {
+      const userDocRef = doc(db, 'users', authUser.uid);
+      
+      // Generate embedding for profile
+      let embedding: number[] = [];
+      try {
+        embedding = await generateProfileEmbedding(editName, editBio, cleanedLinks);
+      } catch (embErr) {
+        console.error('Failed to generate profile embedding:', embErr);
+      }
+
+      await setDoc(userDocRef, {
         displayName: editName,
         bio: editBio,
         links: cleanedLinks,
         photoURL: authUser.photoURL,
         updatedAt: serverTimestamp(),
+        ...(embedding.length > 0 ? { embedding } : {}),
       }, { merge: true });
 
       // 2. Update Firebase Auth profile so that new scraps/comments get the correct name

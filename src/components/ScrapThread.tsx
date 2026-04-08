@@ -1,13 +1,13 @@
 'use client';
 
-import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc, collectionGroup, where, limit } from '../firebase';
-import { useCollection, useDocument } from 'react-firebase-hooks/firestore';
-import { Scrap, Comment, OperationType } from '../types';
+import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc, collectionGroup, where, limit, getDocs, addDoc } from '../firebase';
+import { useCollection, useDocument, useDocumentData } from 'react-firebase-hooks/firestore';
+import { Scrap, Comment, OperationType, User as UserProfile } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import TextareaAutosize from 'react-textarea-autosize';
 import Image from 'next/image';
-import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy, Hash, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Clock, User, Trash2, CheckCircle, Circle, Loader2, MoreVertical, Edit2, Check, X, Reply, MessageSquare, Lock, Unlock, List, ChevronDown, RefreshCw, Copy, Hash, Download, FileText, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkEmoji from 'remark-emoji';
@@ -21,6 +21,8 @@ import { ExpandableBio } from './ExpandableBio';
 import { Auth } from './Auth';
 import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
+import { generateEmbedding, combineContext } from '../lib/embeddings';
+import { generateInquiry } from '../lib/inquiry';
 import { cn } from '../lib/utils';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -157,6 +159,7 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   const [editedTags, setEditedTags] = useState(initialScrap.tags?.join(' ') || '');
   const [isPickingEmoji, setIsPickingEmoji] = useState(false);
   const [isDeletingScrap, setIsDeletingScrap] = useState(false);
+  const [isGeneratingInquiry, setIsGeneratingInquiry] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
@@ -309,6 +312,19 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
         title: editedTitle.trim(),
         updatedAt: serverTimestamp(),
       });
+      
+      // Update embedding
+      try {
+        const commentTexts = allComments.map(c => c.content);
+        const context = combineContext([editedTitle.trim(), ...(scrap.tags || []), ...commentTexts]);
+        const embedding = await generateEmbedding(context);
+        if (embedding.length > 0) {
+          await updateDoc(doc(db, path), { embedding });
+        }
+      } catch (embErr) {
+        console.error('Failed to update embedding after title change:', embErr);
+      }
+
       setIsEditingTitle(false);
       toast.success('タイトルを更新しました');
     } catch (error) {
@@ -332,6 +348,19 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
         tags: tags,
         updatedAt: serverTimestamp(),
       });
+
+      // Update embedding
+      try {
+        const commentTexts = allComments.map(c => c.content);
+        const context = combineContext([scrap.title, ...tags, ...commentTexts]);
+        const embedding = await generateEmbedding(context);
+        if (embedding.length > 0) {
+          await updateDoc(doc(db, path), { embedding });
+        }
+      } catch (embErr) {
+        console.error('Failed to update embedding after tags change:', embErr);
+      }
+
       setIsEditingTags(false);
       toast.success('タグを更新しました');
     } catch (error) {
@@ -419,6 +448,57 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
     }
   };
 
+  const [userProfile] = useDocumentData(
+    auth.currentUser ? doc(db, 'users', auth.currentUser.uid) : null
+  );
+
+  const handleGenerateInquiry = async () => {
+    if (!auth.currentUser || !userProfile || isGeneratingInquiry) return;
+    
+    setIsGeneratingInquiry(true);
+    const toastId = toast.loading('プロデューサーが思考を編纂中...');
+    
+    try {
+      // 1. Fetch all scraps for the user to find context
+      const scrapsQuery = query(collection(db, 'scraps'), where('authorId', '==', auth.currentUser.uid));
+      const scrapsSnapshot = await getDocs(scrapsQuery);
+      const allScrapsForUser = scrapsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
+      
+      // 2. Generate inquiry
+      const result = await generateInquiry(scrap, userProfile as UserProfile, allScrapsForUser);
+      
+      if (result) {
+        // 3. Save as a special comment in the thread
+        const path = `scraps/${scrap.id}/comments`;
+        await addDoc(collection(db, path), {
+          content: `> **Producer Inquiry**\n> ${result.context}\n\n${result.question}`,
+          authorId: 'johari-producer',
+          authorName: 'Johari Producer',
+          authorPhoto: null,
+          createdAt: serverTimestamp(),
+          type: 'producer-inquiry',
+          inquiryType: result.type
+        });
+
+        // Update scrap comment count
+        await updateDoc(doc(db, 'scraps', scrap.id), {
+          commentCount: increment(1),
+          updatedAt: serverTimestamp()
+        });
+
+        toast.success('プロデューサーからの問いが届きました', { id: toastId });
+        scrollToBottom();
+      } else {
+        toast.error('問いの生成に失敗しました', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Error generating inquiry:', error);
+      toast.error('エラーが発生しました', { id: toastId });
+    } finally {
+      setIsGeneratingInquiry(false);
+    }
+  };
+
   const isAdminUser = auth.currentUser?.email === 'naoki.sakata@hopin.co.jp';
   const isAuthor = auth.currentUser?.uid === scrap.authorId || isAdminUser;
 
@@ -474,21 +554,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
     }).catch(() => {
       toast.error('コピーに失敗しました');
     });
-  };
-
-  const downloadThreadAsMarkdown = () => {
-    setShowMenu(false);
-    const markdown = generateMarkdown();
-    const blob = new Blob([markdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${scrap.title.replace(/[/\\?%*:|"<>]/g, '-')}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('Markdownファイルをダウンロードしました');
   };
 
   const excerpt = (text: string) => {
@@ -547,6 +612,22 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                     )}
                   </button>
                 )}
+
+                {isAuthor && (
+                  <button
+                    onClick={handleGenerateInquiry}
+                    disabled={isGeneratingInquiry || isUpdating}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isGeneratingInquiry ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">プロデューサーに問う</span>
+                  </button>
+                )}
+
                 <AuthorProfile 
                   authorId={scrap.authorId} 
                   authorName={scrap.authorName} 
@@ -633,14 +714,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                           >
                             <Copy className="w-4 h-4" />
                             Markdownでコピー
-                          </button>
-                          
-                          <button
-                            onClick={downloadThreadAsMarkdown}
-                            className="w-full flex items-center gap-4 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all"
-                          >
-                            <Download className="w-4 h-4" />
-                            Markdownでダウンロード
                           </button>
                           <button
                             onClick={(e) => {
@@ -986,6 +1059,22 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 createdAt={scrap.createdAt} 
                 onSelectUser={onSelectUser}
               />
+
+              {/* AI Producer Inquiry Button */}
+              {isAuthor && (
+                <button
+                  onClick={handleGenerateInquiry}
+                  disabled={isGeneratingInquiry || isUpdating}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isGeneratingInquiry ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  <span>プロデューサーに問う</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1184,6 +1273,7 @@ function CommentItem({
   const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
   const replies = allReplies.filter((r: any) => r.parentId === comment.id);
   const isEditing = editingCommentId === comment.id;
+  const isProducer = comment.authorId === 'johari-producer';
 
   // Helper to render content with base64 images and scrapbox links
   const getRenderContent = () => {
@@ -1240,7 +1330,9 @@ function CommentItem({
       className={`group/comment relative ${
         isReply 
           ? 'py-3' 
-          : 'bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
+          : isProducer
+            ? 'bg-gradient-to-br from-blue-50 to-indigo-50 p-8 sm:p-10 rounded-[2.5rem] border border-blue-200/50 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
+            : 'bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
       }`}
       id={comment.id}
     >
@@ -1250,11 +1342,18 @@ function CommentItem({
       <div className={`relative z-10 ${isReply ? 'pl-4 border-l-2 border-gray-100' : ''}`}>
         <div className="flex items-center justify-between gap-2 mb-8">
           <button 
-            onClick={() => onSelectUser?.(comment.authorId)}
-            className="flex items-center gap-4 group/author min-w-0"
+            onClick={() => !isProducer && onSelectUser?.(comment.authorId)}
+            className={cn(
+              "flex items-center gap-4 group/author min-w-0",
+              isProducer ? "cursor-default" : "cursor-pointer"
+            )}
           >
             <div className="relative flex-shrink-0">
-              {comment.authorPhoto && comment.authorPhoto !== "" ? (
+              {isProducer ? (
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-600 flex items-center justify-center shadow-md border-2 border-white">
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+              ) : comment.authorPhoto && comment.authorPhoto !== "" ? (
                 <div className="relative w-10 h-10 sm:w-12 sm:h-12">
                   <Image 
                     src={comment.authorPhoto} 
@@ -1272,7 +1371,19 @@ function CommentItem({
               )}
             </div>
             <div className="text-left min-w-0">
-              <p className="font-display text-sm sm:text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors tracking-tight leading-none mb-1.5 truncate">{comment.authorName}</p>
+              <div className="flex items-center gap-2 mb-1.5">
+                <p className={cn(
+                  "font-display text-sm sm:text-base font-bold tracking-tight leading-none truncate",
+                  isProducer ? "text-blue-700" : "text-gray-900 group-hover:text-blue-600 transition-colors"
+                )}>
+                  {comment.authorName}
+                </p>
+                {isProducer && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 text-[8px] sm:text-[10px] font-black uppercase tracking-wider">
+                    AI Producer
+                  </span>
+                )}
+              </div>
               <p className="text-[9px] sm:text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
                 <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 <time dateTime={comment.createdAt ? comment.createdAt.toDate().toISOString() : undefined}>

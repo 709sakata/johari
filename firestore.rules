@@ -62,7 +62,7 @@ service cloud.firestore {
     }
 
     function isValidScrap(data) {
-      return hasOnlyAllowedFields(data, ['title', 'content', 'authorId', 'authorName', 'authorPhoto', 'status', 'createdAt', 'updatedAt', 'commentCount', 'icon_emoji', 'tags']) &&
+      return hasOnlyAllowedFields(data, ['title', 'content', 'authorId', 'authorName', 'authorPhoto', 'status', 'createdAt', 'updatedAt', 'commentCount', 'icon_emoji', 'tags', 'embedding']) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 5000 &&
              (!('content' in data) || (data.content is string && data.content.size() <= 200000)) &&
              data.status in ['open', 'closed'] &&
@@ -73,7 +73,8 @@ service cloud.firestore {
              (!('icon_emoji' in data) || (data.icon_emoji is string && data.icon_emoji.size() <= 10)) &&
              (!('authorPhoto' in data) || (data.authorPhoto is string || data.authorPhoto == null)) &&
              (!('commentCount' in data) || data.commentCount is number) &&
-             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20));
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('embedding' in data) || (data.embedding is list && data.embedding.size() <= 2000));
     }
 
     function isValidComment(data) {
@@ -99,13 +100,14 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(data, ['displayName', 'photoURL', 'bio', 'links', 'updatedAt', 'role']) &&
+      return hasOnlyAllowedFields(data, ['displayName', 'photoURL', 'bio', 'links', 'updatedAt', 'role', 'embedding']) &&
              data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
              (!('photoURL' in data) || (data.photoURL is string || data.photoURL == null)) &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
              (!('links' in data) || (data.links is list && data.links.size() <= 100)) &&
              (!('role' in data) || (data.role in ['admin', 'user'])) &&
-             data.updatedAt is timestamp;
+             data.updatedAt is timestamp &&
+             (!('embedding' in data) || (data.embedding is list && data.embedding.size() <= 2000));
     }
 
     function isValidActivityLog(data) {

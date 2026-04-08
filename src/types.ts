@@ -13,6 +13,7 @@ export interface User {
   bio?: string;
   links?: string[];
   updatedAt: Timestamp;
+  embedding?: number[];
 }
 
 export interface Scrap {
@@ -28,6 +29,7 @@ export interface Scrap {
   commentCount?: number;
   icon_emoji?: string;
   tags?: string[];
+  embedding?: number[];
 }
 
 export interface Comment {
