@@ -1,6 +1,6 @@
 'use client';
 
-import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc, collectionGroup, where, limit, getDocs, addDoc } from '../firebase';
+import { db, collection, query, orderBy, doc, updateDoc, serverTimestamp, deleteDoc, increment, getDoc, collectionGroup, where, limit } from '../firebase';
 import { useCollection, useDocument, useDocumentData } from 'react-firebase-hooks/firestore';
 import { Scrap, Comment, OperationType, User as UserProfile } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,7 +22,6 @@ import { Auth } from './Auth';
 import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
 import { generateEmbedding, combineContext } from '../lib/embeddings';
-import { generateInquiry } from '../lib/inquiry';
 import { cn } from '../lib/utils';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -159,7 +158,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   const [editedTags, setEditedTags] = useState(initialScrap.tags?.join(' ') || '');
   const [isPickingEmoji, setIsPickingEmoji] = useState(false);
   const [isDeletingScrap, setIsDeletingScrap] = useState(false);
-  const [isGeneratingInquiry, setIsGeneratingInquiry] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
@@ -452,53 +450,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
     auth.currentUser ? doc(db, 'users', auth.currentUser.uid) : null
   );
 
-  const handleGenerateInquiry = async () => {
-    if (!auth.currentUser || !userProfile || isGeneratingInquiry) return;
-    
-    setIsGeneratingInquiry(true);
-    const toastId = toast.loading('プロデューサーが思考を編纂中...');
-    
-    try {
-      // 1. Fetch all scraps for the user to find context
-      const scrapsQuery = query(collection(db, 'scraps'), where('authorId', '==', auth.currentUser.uid));
-      const scrapsSnapshot = await getDocs(scrapsQuery);
-      const allScrapsForUser = scrapsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap));
-      
-      // 2. Generate inquiry
-      const result = await generateInquiry(scrap, userProfile as UserProfile, allScrapsForUser);
-      
-      if (result) {
-        // 3. Save as a special comment in the thread
-        const path = `scraps/${scrap.id}/comments`;
-        await addDoc(collection(db, path), {
-          content: `> **Producer Inquiry**\n> ${result.context}\n\n${result.question}`,
-          authorId: 'johari-producer',
-          authorName: 'Johari Producer',
-          authorPhoto: null,
-          createdAt: serverTimestamp(),
-          type: 'producer-inquiry',
-          inquiryType: result.type
-        });
-
-        // Update scrap comment count
-        await updateDoc(doc(db, 'scraps', scrap.id), {
-          commentCount: increment(1),
-          updatedAt: serverTimestamp()
-        });
-
-        toast.success('プロデューサーからの問いが届きました', { id: toastId });
-        scrollToBottom();
-      } else {
-        toast.error('問いの生成に失敗しました', { id: toastId });
-      }
-    } catch (error) {
-      console.error('Error generating inquiry:', error);
-      toast.error('エラーが発生しました', { id: toastId });
-    } finally {
-      setIsGeneratingInquiry(false);
-    }
-  };
-
   const isAdminUser = auth.currentUser?.email === 'naoki.sakata@hopin.co.jp';
   const isAuthor = auth.currentUser?.uid === scrap.authorId || isAdminUser;
 
@@ -610,21 +561,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                         <span className="hidden sm:inline">スレッドを再開する</span>
                       </>
                     )}
-                  </button>
-                )}
-
-                {isAuthor && (
-                  <button
-                    onClick={handleGenerateInquiry}
-                    disabled={isGeneratingInquiry || isUpdating}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isGeneratingInquiry ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                    <span className="hidden sm:inline">プロデューサーに問う</span>
                   </button>
                 )}
 
@@ -1059,22 +995,6 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
                 createdAt={scrap.createdAt} 
                 onSelectUser={onSelectUser}
               />
-
-              {/* AI Producer Inquiry Button */}
-              {isAuthor && (
-                <button
-                  onClick={handleGenerateInquiry}
-                  disabled={isGeneratingInquiry || isUpdating}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isGeneratingInquiry ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4" />
-                  )}
-                  <span>プロデューサーに問う</span>
-                </button>
-              )}
             </div>
           </div>
 

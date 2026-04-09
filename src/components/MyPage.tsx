@@ -5,7 +5,7 @@ import { useCollection, useDocumentData } from 'react-firebase-hooks/firestore';
 import { Scrap, User as UserProfile, UserLink } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download, ChevronDown, FileText } from 'lucide-react';
+import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download, ChevronDown, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -15,6 +15,8 @@ import { ScrapStats } from './ScrapStats';
 import { LinksDialog } from './LinksDialog';
 import { safeStringify } from '../lib/firestore';
 import { generateProfileEmbedding } from '../lib/embeddings';
+import { generateBulkInquiries, InquiryResult, generateObservation, generateInquiriesFromObservation, ObservationResult } from '../lib/inquiry';
+import { NewScrapPage } from './NewScrapPage';
 
 interface MyPageProps {
   onSelectScrap: (scrap: Scrap) => void;
@@ -48,6 +50,15 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
   const [isLinksDialogOpen, setIsLinksDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isSparringOpen, setIsSparringOpen] = useState(false);
+  const [sparringStep, setSparringStep] = useState<1 | 2>(1);
+  const [observation, setObservation] = useState<ObservationResult | null>(null);
+  const [inquiries, setInquiries] = useState<InquiryResult[]>([]);
+  const [isGeneratingInquiries, setIsGeneratingInquiries] = useState(false);
+  const [isGeneratingObservation, setIsGeneratingObservation] = useState(false);
+  const [userFeedback, setUserFeedback] = useState('');
+  const [selectedInquiry, setSelectedInquiry] = useState<string | null>(null);
+  const [showNewScrapModal, setShowNewScrapModal] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -335,6 +346,59 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
     }
   };
 
+  const handleSparring = async () => {
+    if (!authUser || !profile || isGeneratingObservation) return;
+    
+    setIsGeneratingObservation(true);
+    setIsSparringOpen(true);
+    setSparringStep(1);
+    setObservation(null);
+    setInquiries([]);
+    setSelectedInquiry(null);
+    setUserFeedback('');
+    
+    const toastId = toast.loading('プロデューサーがあなたの「空白」を観察中...');
+    
+    try {
+      const result = await generateObservation(profile as UserProfile, allScraps);
+      if (result) {
+        setObservation(result);
+        toast.success('観察結果がまとまりました', { id: toastId });
+      } else {
+        toast.error('観察に失敗しました', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Failed to generate observation:', error);
+      toast.error('観察に失敗しました', { id: toastId });
+    } finally {
+      setIsGeneratingObservation(false);
+    }
+  };
+
+  const handleConfirmObservation = async () => {
+    if (!authUser || !profile || !observation || isGeneratingInquiries) return;
+    
+    setIsGeneratingInquiries(true);
+    const toastId = toast.loading('プロデューサーが問いを立てています...');
+    
+    try {
+      const results = await generateInquiriesFromObservation(
+        profile as UserProfile, 
+        allScraps, 
+        observation, 
+        userFeedback
+      );
+      setInquiries(results);
+      setSparringStep(2);
+      toast.success('3つの問いが届きました', { id: toastId });
+    } catch (error) {
+      console.error('Failed to generate inquiries:', error);
+      toast.error('問いの生成に失敗しました', { id: toastId });
+    } finally {
+      setIsGeneratingInquiries(false);
+    }
+  };
+
   const [value, loading, error] = useCollection(
     authUser ? query(
       collection(db, 'scraps'),
@@ -453,6 +517,20 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
                       <span className="text-xs sm:text-lg font-black text-gray-900">{allScraps.filter(s => s.status === 'open').length}</span>
                     </div>
                   </div>
+
+                  {/* AI Sparring Button */}
+                  <button
+                    onClick={handleSparring}
+                    disabled={isGeneratingInquiries}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 transition-all active:scale-95 group disabled:opacity-50"
+                  >
+                    {isGeneratingInquiries ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                    )}
+                    <span className="text-[11px] font-black uppercase tracking-widest">AIと壁打ち</span>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -768,6 +846,208 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
         onClose={() => setIsLinksDialogOpen(false)}
         links={profile?.links || []}
       />
+
+      {/* AI Sparring Modal */}
+      <AnimatePresence>
+        {isSparringOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSparringOpen(false)}
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl border border-white/40 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-8 sm:p-10 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-display font-bold text-gray-900">AIプロデューサーと壁打ち</h2>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      {sparringStep === 1 ? 'Step 1: プロデューサーの観察' : 'Step 2: 盲点の窓を開く問い'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSparringOpen(false)}
+                  className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 sm:p-10 space-y-8 scrollbar-thin scrollbar-thumb-gray-100">
+                {sparringStep === 1 ? (
+                  <div className="space-y-8">
+                    {isGeneratingObservation ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                        <p className="text-gray-500 font-medium">プロデューサーがあなたの「空白」を観察中...</p>
+                      </div>
+                    ) : observation ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-8"
+                      >
+                        <div className="p-8 bg-blue-50/50 rounded-[2rem] border border-blue-100 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <FileText className="w-20 h-20 text-blue-600" />
+                          </div>
+                          <h3 className="text-2xl font-display font-bold text-blue-900 mb-6 tracking-tight">
+                            『{observation.title}』
+                          </h3>
+                          
+                          <div className="space-y-6">
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Observation</p>
+                              <p className="text-sm text-gray-700 leading-relaxed font-medium">{observation.observation}</p>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Negative Space (空白)</p>
+                              <p className="text-sm text-gray-900 leading-relaxed font-bold bg-white/60 p-4 rounded-2xl border border-white/40 shadow-sm">
+                                {observation.negativeSpace}
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Hypothesis</p>
+                              <p className="text-sm text-gray-700 leading-relaxed italic">{observation.hypothesis}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">
+                            この解釈について、補足や修正はありますか？（任意）
+                          </label>
+                          <textarea
+                            value={userFeedback}
+                            onChange={(e) => setUserFeedback(e.target.value)}
+                            placeholder="「最近は特に〇〇に悩んでいます」「この空白は意図的です」など..."
+                            className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-h-[100px] resize-none"
+                          />
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {isGeneratingInquiries ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                        <p className="text-gray-500 font-medium">プロデューサーが問いを立てています...</p>
+                      </div>
+                    ) : inquiries.length > 0 ? (
+                      <div className="space-y-6">
+                        {inquiries.map((inquiry, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className={cn(
+                              "p-6 rounded-3xl border transition-all cursor-pointer group relative overflow-hidden",
+                              selectedInquiry === inquiry.question
+                                ? "bg-blue-50 border-blue-200 shadow-lg shadow-blue-500/5"
+                                : "bg-gray-50 border-gray-100 hover:border-blue-100 hover:bg-white"
+                            )}
+                            onClick={() => setSelectedInquiry(inquiry.question)}
+                          >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="flex items-start gap-4">
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+                                inquiry.type === 'fact-check' ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"
+                              )}>
+                                {inquiry.type === 'fact-check' ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{inquiry.type === 'fact-check' ? 'Fact Check' : 'Meta Cognition'}</p>
+                                <p className="text-sm font-bold text-gray-900 leading-relaxed">{inquiry.question}</p>
+                                <p className="text-[11px] text-gray-500 leading-relaxed bg-white/50 p-3 rounded-xl border border-white/40">
+                                  <span className="font-black uppercase tracking-tighter mr-2">Context:</span>
+                                  {inquiry.context}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 sm:p-10 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-6 flex-shrink-0">
+                {sparringStep === 1 ? (
+                  <>
+                    <button
+                      onClick={handleSparring}
+                      disabled={isGeneratingObservation}
+                      className="flex items-center gap-2 text-xs font-black text-gray-400 hover:text-blue-600 transition-colors uppercase tracking-widest group"
+                    >
+                      <RefreshCw className={cn("w-4 h-4 group-hover:rotate-180 transition-transform duration-500", isGeneratingObservation && "animate-spin")} />
+                      別の視点で観察する
+                    </button>
+                    <button
+                      onClick={handleConfirmObservation}
+                      disabled={!observation || isGeneratingInquiries}
+                      className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                    >
+                      <Check className="w-5 h-5" />
+                      この解釈で問いを立てる
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setSparringStep(1)}
+                      className="flex items-center gap-2 text-xs font-black text-gray-400 hover:text-blue-600 transition-colors uppercase tracking-widest"
+                    >
+                      観察に戻る
+                    </button>
+                    <button
+                      onClick={() => selectedInquiry && setShowNewScrapModal(true)}
+                      disabled={!selectedInquiry}
+                      className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                    >
+                      <Plus className="w-5 h-5" />
+                      この問いからスレッドを作る
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* New Scrap Modal for Sparring */}
+      <AnimatePresence>
+        {showNewScrapModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white">
+            <NewScrapPage
+              initialTitle={selectedInquiry || ''}
+              onClose={() => setShowNewScrapModal(false)}
+              onSuccess={(scrapId) => {
+                setShowNewScrapModal(false);
+                setIsSparringOpen(false);
+                onSelectScrap({ id: scrapId } as Scrap);
+              }}
+            />
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
