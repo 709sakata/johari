@@ -22,7 +22,7 @@ import { Auth } from './Auth';
 import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
 import { generateEmbedding, combineContext } from '../lib/embeddings';
-import { cn } from '../lib/utils';
+import { cn, handleListContinuation } from '../lib/utils';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkPreview } from './LinkPreview';
@@ -1251,15 +1251,15 @@ function CommentItem({
         isReply 
           ? 'py-3' 
           : isProducer
-            ? 'bg-gradient-to-br from-blue-50 to-indigo-50 p-8 sm:p-10 rounded-[2.5rem] border border-blue-200/50 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
-            : 'bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
+            ? 'bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] border border-blue-200/50 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
+            : 'bg-white/60 backdrop-blur-md p-4 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] border border-white/40 shadow-xl shadow-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/10 transition-all scroll-mt-24'
       }`}
       id={comment.id}
     >
       {/* Glass reflection effect */}
       {!isReply && <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none rounded-[2.5rem]" />}
 
-      <div className={`relative z-10 ${isReply ? 'pl-4 border-l-2 border-gray-100' : ''}`}>
+      <div className={`relative z-10 ${isReply ? 'pl-3 sm:pl-4 border-l-2 border-gray-100' : ''}`}>
         <div className="flex items-center justify-between gap-2 mb-8">
           <button 
             onClick={() => !isProducer && onSelectUser?.(comment.authorId)}
@@ -1343,6 +1343,10 @@ function CommentItem({
               value={editingCommentContent}
               onChange={(e) => setEditingCommentContent(e.target.value)}
               onKeyDown={(e) => {
+                if (handleListContinuation(e, editingCommentContent, setEditingCommentContent)) {
+                  return;
+                }
+
                 if ((e.metaKey || e.ctrlKey)) {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1555,7 +1559,7 @@ function CommentItem({
       </AnimatePresence>
 
       {replies.length > 0 && (
-        <div className={isReply ? "space-y-2 mt-2" : "ml-4 mt-4 border-l-2 border-gray-100 pl-8 space-y-4"}>
+        <div className={isReply ? "space-y-2 mt-2" : "ml-2 sm:ml-4 mt-4 border-l-2 border-gray-100 pl-4 sm:pl-8 space-y-4"}>
           {replies.map((reply: any, rIndex: number) => (
             <CommentItem
               key={reply.id}

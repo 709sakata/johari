@@ -22,6 +22,7 @@ import { MentionDropdown } from './MentionDropdown';
 import getCaretCoordinates from 'textarea-caret';
 import { toast } from 'sonner';
 import { Scrap } from '../types';
+import { handleListContinuation } from '../lib/utils';
 
 import { logActivity, ActivityType } from '../lib/analytics';
 
@@ -228,6 +229,11 @@ export function CommentForm({ scrapId, parentId, onSuccess, autoFocus, onCreateS
           return;
         }
       }
+    }
+
+    // Handle list continuation on Enter
+    if (handleListContinuation(e, content, setContent)) {
+      return;
     }
 
     if (!isComposing && (e.metaKey || e.ctrlKey)) {

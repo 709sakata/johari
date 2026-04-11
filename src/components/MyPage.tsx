@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download, ChevronDown, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
-import { cn } from '../lib/utils';
+import { cn, handleListContinuation } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommentCount } from './CommentCount';
 import { toast } from 'sonner';
@@ -182,6 +182,9 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
   const embedCode = authUser ? `<iframe src="${origin}/profile/${authUser.uid}?embed=true" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eee;"></iframe>` : '';
 
   const handleBioKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (handleListContinuation(e, editBio, setEditBio)) {
+      return;
+    }
     if ((e.metaKey || e.ctrlKey)) {
       if (e.key === 'b') {
         e.preventDefault();
@@ -933,6 +936,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
                           <textarea
                             value={userFeedback}
                             onChange={(e) => setUserFeedback(e.target.value)}
+                            onKeyDown={(e) => handleListContinuation(e, userFeedback, setUserFeedback)}
                             placeholder="「最近は特に〇〇に悩んでいます」「この空白は意図的です」など..."
                             className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-h-[100px] resize-none"
                           />
