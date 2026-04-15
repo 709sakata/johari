@@ -3,16 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db, doc, onSnapshot } from '../../../firebase';
-import { Scrap } from '../../../types';
+import { Scrap, Comment } from '../../../types';
 import { ScrapThread } from '../../../components/ScrapThread';
 import { Loader2 } from 'lucide-react';
 
 interface ScrapThreadWrapperProps {
   id: string;
   initialData?: Scrap | null;
+  initialComments?: Comment[];
 }
 
-export const ScrapThreadWrapper: React.FC<ScrapThreadWrapperProps> = ({ id, initialData }) => {
+export const ScrapThreadWrapper: React.FC<ScrapThreadWrapperProps> = ({ id, initialData, initialComments }) => {
   const router = useRouter();
   const [scrap, setScrap] = useState<Scrap | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
@@ -67,6 +68,7 @@ export const ScrapThreadWrapper: React.FC<ScrapThreadWrapperProps> = ({ id, init
   return (
     <ScrapThread
       scrap={scrap}
+      initialComments={initialComments}
       onBack={() => router.push('/', { scroll: false })}
       onSelectUser={(userId) => router.push(`/profile/${userId}`, { scroll: false })}
       onSelectScrap={(selectedScrap) => router.push(`/scraps/${selectedScrap.id}`, { scroll: false })}

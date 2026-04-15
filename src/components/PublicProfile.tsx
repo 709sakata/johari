@@ -7,7 +7,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { MessageSquare, Clock, Loader2, User, ExternalLink, Github, Twitter, Globe, Link as LinkIcon } from 'lucide-react';
 import Image from 'next/image';
-import { cn } from '../lib/utils';
+import Link from 'next/link';
+import { cn, generateSlug } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommentCount } from './CommentCount';
 import { ExpandableBio } from './ExpandableBio';
@@ -215,48 +216,51 @@ export function PublicProfile({ userId, onSelectScrap, onSelectUser, isEmbed, in
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => onSelectScrap(scrap)}
-                    className="group relative w-full p-3 sm:p-5 bg-white/60 backdrop-blur-md hover:bg-white rounded-[1.5rem] sm:rounded-[2.5rem] border border-white/40 hover:border-blue-200 transition-all cursor-pointer overflow-hidden flex items-center gap-3 sm:gap-6 hover:shadow-2xl hover:-translate-y-1 shadow-xl shadow-blue-500/5"
                   >
-                    {/* Left Side: Emoji Block */}
-                    <div className="w-14 h-14 sm:w-28 sm:h-28 bg-white rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:bg-blue-50">
-                      <span className="text-2xl sm:text-5xl select-none transform transition-transform duration-500 group-hover:rotate-12">
-                        {scrap.icon_emoji || '📄'}
-                      </span>
-                    </div>
+                    <Link
+                      href={`/scraps/${scrap.id}/${generateSlug(scrap.title)}`}
+                      className="group relative w-full p-3 sm:p-5 bg-white/60 backdrop-blur-md hover:bg-white rounded-[1.5rem] sm:rounded-[2.5rem] border border-white/40 hover:border-blue-200 transition-all cursor-pointer overflow-hidden flex items-center gap-3 sm:gap-6 hover:shadow-2xl hover:-translate-y-1 shadow-xl shadow-blue-500/5"
+                    >
+                      {/* Left Side: Emoji Block */}
+                      <div className="w-14 h-14 sm:w-28 sm:h-28 bg-white rounded-[1rem] sm:rounded-[2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:bg-blue-50">
+                        <span className="text-2xl sm:text-5xl select-none transform transition-transform duration-500 group-hover:rotate-12">
+                          {scrap.icon_emoji || '📄'}
+                        </span>
+                      </div>
 
-                    {/* Right Side: Content */}
-                    <div className="flex-1 min-w-0 pr-2 py-0.5">
-                      <h3 className={cn(
-                        "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 sm:mb-3 line-clamp-2 leading-tight tracking-tight",
-                        scrap.title.length > 40 ? "text-sm sm:text-lg" : "text-base sm:text-xl"
-                      )}>
-                        {scrap.title}
-                      </h3>
-                      
-                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn(
-                            "w-2.5 h-2.5 rounded-full",
-                            scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-gray-400"
-                          )} />
-                          <span className={cn(
-                            "text-[10px] sm:text-[11px] font-black uppercase tracking-widest",
-                            scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
-                          )}>
-                            {scrap.status === 'open' ? 'Open' : 'Closed'}
-                          </span>
-                        </div>
+                      {/* Right Side: Content */}
+                      <div className="flex-1 min-w-0 pr-2 py-0.5">
+                        <h3 className={cn(
+                          "font-display font-bold text-gray-900 group-hover:text-blue-600 transition-colors break-words mb-1.5 sm:mb-3 line-clamp-2 leading-tight tracking-tight",
+                          scrap.title.length > 40 ? "text-sm sm:text-lg" : "text-base sm:text-xl"
+                        )}>
+                          {scrap.title}
+                        </h3>
+                        
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className={cn(
+                              "w-2.5 h-2.5 rounded-full",
+                              scrap.status === 'open' ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-gray-400"
+                            )} />
+                            <span className={cn(
+                              "text-[10px] sm:text-[11px] font-black uppercase tracking-widest",
+                              scrap.status === 'open' ? "text-emerald-600" : "text-gray-500"
+                            )}>
+                              {scrap.status === 'open' ? 'Open' : 'Closed'}
+                            </span>
+                          </div>
 
-                        <div className="flex items-center gap-5 text-gray-400">
-                          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
-                            <Clock className="w-3.5 h-3.5" />
-                            {scrap.updatedAt ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
-                          </span>
-                          <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
+                          <div className="flex items-center gap-5 text-gray-400">
+                            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5" />
+                              {scrap.updatedAt ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
+                            </span>
+                            <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </motion.div>
                 ))}
               </AnimatePresence>

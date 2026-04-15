@@ -64,6 +64,7 @@ function BacklinkCard({ scrapId, commentContent, onSelectScrap }: { scrapId: str
 
 interface ScrapThreadProps {
   scrap: Scrap;
+  initialComments?: Comment[];
   onBack: () => void;
   onSelectUser?: (userId: string) => void;
   onSelectScrap?: (scrap: Scrap) => void;
@@ -135,7 +136,7 @@ function BioDisplay({ userId, className }: { userId: string, className?: string 
   return <ExpandableBio bio={bio} className={className} />;
 }
 
-export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelectScrap, onCreateScrap }: ScrapThreadProps) {
+export function ScrapThread({ scrap: initialScrap, initialComments, onBack, onSelectUser, onSelectScrap, onCreateScrap }: ScrapThreadProps) {
   const [scrapValue, scrapLoading, scrapError] = useDocument(doc(db, `scraps/${initialScrap.id}`));
   const [commentsValue, loading, error] = useCollection(
     query(collection(db, `scraps/${initialScrap.id}/comments`), orderBy('createdAt', 'asc'))
@@ -168,7 +169,12 @@ export function ScrapThread({ scrap: initialScrap, onBack, onSelectUser, onSelec
   const menuRef = useRef<HTMLDivElement>(null);
 
   const scrap = scrapValue?.exists() ? ({ id: scrapValue.id, ...scrapValue.data() } as Scrap) : initialScrap;
-  const allComments = useMemo(() => commentsValue?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)) || [], [commentsValue]);
+  const allComments = useMemo(() => {
+    if (commentsValue) {
+      return commentsValue.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+    }
+    return initialComments || [];
+  }, [commentsValue, initialComments]);
   
   const [origin, setOrigin] = useState('');
 
@@ -1231,7 +1237,8 @@ function CommentItem({
   };
 
   const copyCommentAsMarkdown = () => {
-    const commentDate = comment.createdAt ? comment.createdAt.toDate().toLocaleString('ja-JP') : '不明';
+    const displayDate = getDisplayDate(comment.createdAt);
+    const commentDate = displayDate ? displayDate.toLocaleString('ja-JP') : '不明';
     let markdown = `## ${comment.authorName} (${commentDate})\n`;
     markdown += `${comment.content}`;
 
@@ -1306,8 +1313,8 @@ function CommentItem({
               </div>
               <p className="text-[9px] sm:text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
                 <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                <time dateTime={comment.createdAt ? comment.createdAt.toDate().toISOString() : undefined}>
-                  {comment.createdAt ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                <time dateTime={getDisplayDate(comment.createdAt)?.toISOString()}>
+                  {comment.createdAt ? formatDistanceToNow(getDisplayDate(comment.createdAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
                 </time>
                 {comment.updatedAt && <span className="ml-2 opacity-60">(編集済み)</span>}
               </p>

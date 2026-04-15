@@ -224,7 +224,7 @@ export default async function ScrapPage({ params }: PageProps) {
       />
       <Header />
       <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
-        <ScrapThreadWrapper id={id} initialData={scrapData} />
+        <ScrapThreadWrapper id={id} initialData={scrapData} initialComments={comments} />
         
         {data?.relatedScraps && data.relatedScraps.length > 0 && (
           <section className="mt-16 border-t border-gray-100 pt-12">
