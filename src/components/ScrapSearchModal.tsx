@@ -6,7 +6,7 @@ import { Search, X, Loader2, MessageSquare, Clock, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { cn } from '../lib/utils';
+import { cn, getDisplayDate } from '../lib/utils';
 
 interface ScrapSearchModalProps {
   isOpen: boolean;
@@ -96,8 +96,8 @@ export function ScrapSearchModal({ isOpen, onClose, onSelect }: ScrapSearchModal
           
           // Sort by updatedAt
           results.sort((a, b) => {
-            const tA = a.updatedAt?.toMillis() || 0;
-            const tB = b.updatedAt?.toMillis() || 0;
+            const tA = getDisplayDate(a.updatedAt)?.getTime() || 0;
+            const tB = getDisplayDate(b.updatedAt)?.getTime() || 0;
             return tB - tA;
           });
         } else {
@@ -198,7 +198,7 @@ export function ScrapSearchModal({ isOpen, onClose, onSelect }: ScrapSearchModal
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-[10px] text-gray-400 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                      {scrap.updatedAt ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
                     </span>
                     <span className="text-[10px] text-gray-400 flex items-center gap-1">
                       <User className="w-3 h-3" />

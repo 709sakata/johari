@@ -5,7 +5,7 @@ import { Scrap, Comment } from '../../../types';
 import { ScrapThread } from '../../../components/ScrapThread';
 import { Header } from '../../../components/Header';
 import { Footer } from '../../../components/Footer';
-import { generateSlug } from '@/lib/utils';
+import { generateSlug, getDisplayDate } from '@/lib/utils';
 import Link from 'next/link';
 import { MessageSquare, Clock, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -63,7 +63,15 @@ const getCachedScrapData = cache(async (idArray: string[]) => {
         );
         const relatedSnapshot = await getDocs(relatedQuery);
         relatedScraps = relatedSnapshot.docs
-          .map(doc => ({ ...doc.data(), id: doc.id } as any))
+          .map(doc => {
+            const rData = doc.data();
+            return {
+              ...rData,
+              id: doc.id,
+              createdAt: (rData as any).createdAt?.toDate().toISOString(),
+              updatedAt: (rData as any).updatedAt?.toDate().toISOString(),
+            };
+          })
           .filter(s => s.id !== id)
           .slice(0, 3);
       } catch (e) {
@@ -265,7 +273,7 @@ export default async function ScrapPage({ params }: PageProps) {
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {related.updatedAt ? formatDistanceToNow(related.updatedAt.toDate(), { addSuffix: true, locale: ja }) : '不明'}
+                        {related.updatedAt ? formatDistanceToNow(getDisplayDate(related.updatedAt)!, { addSuffix: true, locale: ja }) : '不明'}
                       </div>
                     </div>
                     <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />

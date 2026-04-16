@@ -7,7 +7,7 @@ import { ja } from 'date-fns/locale';
 import { MessageSquare, Clock, User, Loader2, LayoutGrid, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { cn, generateSlug } from '../lib/utils';
+import { cn, generateSlug, getDisplayDate } from '../lib/utils';
 import { motion } from 'motion/react';
 import { DIVERSE_EMOJIS } from '../constants/emojis';
 
@@ -30,12 +30,6 @@ export function ScrapList({ onSelectScrap, onSelectUser, initialScraps }: ScrapL
 
   const scraps = value?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scrap)) || initialScraps || [];
   const isActuallyLoading = loading && scraps.length === 0;
-
-  const getDisplayDate = (date: any) => {
-    if (!date) return null;
-    if (typeof date.toDate === 'function') return date.toDate();
-    return new Date(date);
-  };
 
   useEffect(() => {
     setWindowWidth(window.innerWidth);

@@ -7,6 +7,7 @@ import { Scrap } from '../types';
 import { Clock, Loader2, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { getDisplayDate } from '../lib/utils';
 
 interface LatestScrapsSidebarProps {
   currentScrapId: string;
@@ -64,7 +65,7 @@ export function LatestScrapsSidebar({ currentScrapId, onSelectScrap }: LatestScr
                   <Clock className="w-3 h-3" />
                   <span>
                     {scrap.updatedAt 
-                      ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) 
+                      ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) 
                       : 'たった今'}
                   </span>
                 </div>

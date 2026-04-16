@@ -3,7 +3,7 @@ import { db, collection, query, orderBy, limit, getDocs, where } from '../fireba
 import { Scrap } from '../types';
 import { Loader2, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, getDisplayDate } from '../lib/utils';
 
 interface MentionDropdownProps {
   searchTerm: string;
@@ -85,8 +85,8 @@ export function MentionDropdown({ searchTerm, onSelect, onClose, position, onScr
         
         // Sort by updatedAt for the final list
         results.sort((a, b) => {
-          const tA = a.updatedAt?.toMillis() || 0;
-          const tB = b.updatedAt?.toMillis() || 0;
+          const tA = getDisplayDate(a.updatedAt)?.getTime() || 0;
+          const tB = getDisplayDate(b.updatedAt)?.getTime() || 0;
           return tB - tA;
         });
 

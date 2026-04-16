@@ -22,7 +22,7 @@ import { Auth } from './Auth';
 import { auth } from '../firebase';
 import { handleFirestoreError } from '../lib/firestore';
 import { generateEmbedding, combineContext } from '../lib/embeddings';
-import { cn, handleListContinuation } from '../lib/utils';
+import { cn, handleListContinuation, getDisplayDate } from '../lib/utils';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkPreview } from './LinkPreview';
@@ -71,13 +71,7 @@ interface ScrapThreadProps {
   onCreateScrap?: (title: string) => void;
 }
 
-const getDisplayDate = (date: any) => {
-  if (!date) return null;
-  if (typeof date.toDate === 'function') return date.toDate();
-  return new Date(date);
-};
-
-function AuthorProfile({ authorId, authorName, authorPhoto, createdAt, onSelectUser }: { authorId: string, authorName: string, authorPhoto: string | null, createdAt: any, onSelectUser?: (userId: string) => void }) {
+const AuthorProfile = ({ authorId, authorName, authorPhoto, createdAt, onSelectUser }: { authorId: string, authorName: string, authorPhoto: string | null, createdAt: any, onSelectUser?: (userId: string) => void }) => {
   const [authorDoc] = useDocument(doc(db, `users/${authorId}`));
   const bio = authorDoc?.data()?.bio;
 
@@ -481,7 +475,7 @@ export function ScrapThread({ scrap: initialScrap, initialComments, onBack, onSe
   };
 
   const generateMarkdown = () => {
-    const scrapDate = scrap.createdAt ? scrap.createdAt.toDate().toLocaleString('ja-JP') : '不明';
+    const scrapDate = getDisplayDate(scrap.createdAt)?.toLocaleString('ja-JP') || '不明';
     let markdown = `# ${scrap.icon_emoji || ''} ${scrap.title}\n`;
     markdown += `Author: ${scrap.authorName}\n`;
     markdown += `Date: ${scrapDate}\n\n`;
@@ -489,13 +483,13 @@ export function ScrapThread({ scrap: initialScrap, initialComments, onBack, onSe
 
     // Sort comments by date
     const sortedComments = [...allComments].sort((a, b) => {
-      const tA = a.createdAt?.toMillis() || 0;
-      const tB = b.createdAt?.toMillis() || 0;
+      const tA = getDisplayDate(a.createdAt)?.getTime() || 0;
+      const tB = getDisplayDate(b.createdAt)?.getTime() || 0;
       return tA - tB;
     });
 
     sortedComments.forEach((comment) => {
-      const commentDate = comment.createdAt ? comment.createdAt.toDate().toLocaleString('ja-JP') : '不明';
+      const commentDate = getDisplayDate(comment.createdAt)?.toLocaleString('ja-JP') || '不明';
       markdown += `## ${comment.authorName} (${commentDate})\n`;
       markdown += `${comment.content}\n\n`;
       markdown += `---\n\n`;
@@ -1028,8 +1022,8 @@ export function ScrapThread({ scrap: initialScrap, initialComments, onBack, onSe
                   
                   // すべての子孫を取得し、作成日時順にソート
                   const pcDescendants = getDescendants(pc.id).sort((a, b) => {
-                    const tA = a.createdAt?.toMillis() || 0;
-                    const tB = b.createdAt?.toMillis() || 0;
+                    const tA = getDisplayDate(a.createdAt)?.getTime() || 0;
+                    const tB = getDisplayDate(b.createdAt)?.getTime() || 0;
                     return tA - tB;
                   });
 

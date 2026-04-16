@@ -16,6 +16,18 @@ export function generateSlug(text: string): string {
     .substring(0, 100); // Limit length
 }
 
+export function getDisplayDate(date: any): Date | null {
+  if (!date) return null;
+  if (typeof date.toDate === 'function') return date.toDate();
+  if (date instanceof Date) return date;
+  try {
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Handles automatic list continuation (unordered and ordered) in a textarea.
  * Returns true if the event was handled (and default prevented).

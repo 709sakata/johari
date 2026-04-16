@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { MessageSquare, Clock, Loader2, User, Code, Check, Plus, Trash2, ExternalLink, Edit2, Save, X, Globe, Github, Twitter, Link as LinkIcon, LayoutGrid, Circle, CheckCircle2, Download, ChevronDown, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
-import { cn, handleListContinuation } from '../lib/utils';
+import { cn, handleListContinuation, getDisplayDate } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { CommentCount } from './CommentCount';
 import { toast } from 'sonner';
@@ -830,7 +830,7 @@ export function MyPage({ onSelectScrap, onSelectUser }: MyPageProps) {
                       <div className="flex items-center gap-5 text-gray-400">
                         <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
                           <Clock className="w-3.5 h-3.5" />
-                          {scrap.updatedAt ? formatDistanceToNow(scrap.updatedAt.toDate(), { addSuffix: true, locale: ja }) : 'たった今'}
+                          {scrap.updatedAt ? formatDistanceToNow(getDisplayDate(scrap.updatedAt)!, { addSuffix: true, locale: ja }) : 'たった今'}
                         </span>
                         <CommentCount scrapId={scrap.id} initialCount={scrap.commentCount} />
                       </div>
