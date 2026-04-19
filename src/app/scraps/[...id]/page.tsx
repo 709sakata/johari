@@ -5,7 +5,7 @@ import { Scrap, Comment } from '../../../types';
 import { ScrapThread } from '../../../components/ScrapThread';
 import { Header } from '../../../components/Header';
 import { Footer } from '../../../components/Footer';
-import { generateSlug, getDisplayDate } from '@/lib/utils';
+import { generateSlug, getDisplayDate, getBaseUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { MessageSquare, Clock, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -107,7 +107,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? plainContent.substring(0, 160) + (plainContent.length > 160 ? '...' : '')
     : `新しいスレッド「${scrap.title}」が作成されました。思考を整理し、対話を通じて未知の自分を発見しましょう。`;
   
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
+  const host = getBaseUrl();
   const ogImage = `${host}/api/og-image/${id}`;
 
   return {
@@ -149,7 +149,7 @@ export default async function ScrapPage({ params }: PageProps) {
   const firstComment = data?.firstComment || null;
   const comments = data?.comments || [];
 
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
+  const host = getBaseUrl();
   
   const jsonLd = scrapData ? {
     '@context': 'https://schema.org',

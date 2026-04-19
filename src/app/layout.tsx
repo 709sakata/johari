@@ -4,6 +4,7 @@ import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { FirebaseProvider } from '../components/FirebaseProvider';
 import { Toaster } from 'sonner';
+import { getBaseUrl } from '@/lib/utils';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,7 +17,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_URL || 'https://johari.cloud'),
   title: {
     default: 'じょはり | まだ知らない自分に出会う思考の窓',
     template: '%s | じょはり',

@@ -2,8 +2,10 @@ import { MetadataRoute } from 'next';
 import { db, collection, getDocs, query, orderBy } from '../firebase';
 import { generateSlug } from '@/lib/utils';
 
+import { getBaseUrl } from '@/lib/utils';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
+  const host = getBaseUrl();
 
   // Fetch all scraps to include in sitemap
   let scrapUrls: any[] = [];

@@ -6,6 +6,7 @@ import { PublicProfile } from '../../../components/PublicProfile';
 import { Header } from '../../../components/Header';
 import { Footer } from '../../../components/Footer';
 import { redirect } from 'next/navigation';
+import { getBaseUrl } from '@/lib/utils';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -77,7 +78,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
   const userData = await getCachedUserData(id);
 
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
+  const host = getBaseUrl();
   const jsonLd = userData ? {
     '@context': 'https://schema.org',
     '@type': 'Person',

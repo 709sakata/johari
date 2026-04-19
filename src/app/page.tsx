@@ -5,6 +5,7 @@ import { HomeClient } from './HomeClient';
 import type { Metadata } from 'next';
 import { db, collection, query, orderBy, limit, getDocs } from '../firebase';
 import { Scrap } from '../types';
+import { getBaseUrl } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'じょはり | まだ知らない自分に出会う思考の窓',
@@ -34,7 +35,7 @@ const getInitialScraps = cache(async () => {
 });
 
 export default async function HomePage() {
-  const host = process.env.NEXT_PUBLIC_BASE_URL || 'https://johari.cloud';
+  const host = getBaseUrl();
   const initialScraps = await getInitialScraps();
   
   const jsonLd = {
