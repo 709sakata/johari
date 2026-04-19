@@ -7,6 +7,7 @@ import { Header } from '../../../components/Header';
 import { Footer } from '../../../components/Footer';
 import { redirect } from 'next/navigation';
 import { getBaseUrl } from '@/lib/utils';
+import { getServerBaseUrl } from '@/lib/server-utils';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -78,7 +79,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
   const userData = await getCachedUserData(id);
 
-  const host = getBaseUrl();
+  const host = await getServerBaseUrl();
   const jsonLd = userData ? {
     '@context': 'https://schema.org',
     '@type': 'Person',

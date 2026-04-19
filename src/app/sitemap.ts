@@ -2,10 +2,10 @@ import { MetadataRoute } from 'next';
 import { db, collection, getDocs, query, orderBy } from '../firebase';
 import { generateSlug } from '@/lib/utils';
 
-import { getBaseUrl } from '@/lib/utils';
+import { getServerBaseUrl } from '@/lib/server-utils';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const host = getBaseUrl();
+  const host = await getServerBaseUrl();
 
   // Fetch all scraps to include in sitemap
   let scrapUrls: any[] = [];

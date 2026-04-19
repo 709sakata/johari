@@ -1,8 +1,8 @@
 import { MetadataRoute } from 'next';
-import { getBaseUrl } from '@/lib/utils';
+import { getServerBaseUrl } from '@/lib/server-utils';
 
-export default function robots(): MetadataRoute.Robots {
-  const host = getBaseUrl();
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const host = await getServerBaseUrl();
   
   return {
     rules: {

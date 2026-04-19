@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { db, collection, query, orderBy, limit, getDocs } from '../firebase';
 import { Scrap } from '../types';
 import { getBaseUrl } from '@/lib/utils';
+import { getServerBaseUrl } from '@/lib/server-utils';
 
 export const metadata: Metadata = {
   title: 'じょはり | まだ知らない自分に出会う思考の窓',
@@ -35,7 +36,7 @@ const getInitialScraps = cache(async () => {
 });
 
 export default async function HomePage() {
-  const host = getBaseUrl();
+  const host = await getServerBaseUrl();
   const initialScraps = await getInitialScraps();
   
   const jsonLd = {
