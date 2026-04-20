@@ -3,11 +3,11 @@ import { Feed } from 'feed';
 import { db, collection, query as queryClient, orderBy as orderByClient, limit as limitClient, getDocs as getDocsClient } from '../../firebase';
 import { Scrap } from '../../types';
 
+import { getServerBaseUrl } from '@/lib/server-utils';
+
 export async function GET(request: Request) {
   try {
-    const host = request.headers.get('host') || 'johari.cloud';
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-    const baseUrl = `${protocol}://${host}`;
+    const baseUrl = await getServerBaseUrl();
 
     let docs: any[] = [];
     
