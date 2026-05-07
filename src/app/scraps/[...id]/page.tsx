@@ -8,6 +8,7 @@ import { Footer } from '../../../components/Footer';
 import { generateSlug, getDisplayDate, getBaseUrl } from '@/lib/utils';
 import { getServerBaseUrl } from '@/lib/server-utils';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { MessageSquare, Clock, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -144,11 +145,33 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ScrapPage({ params }: PageProps) {
   const { id: idArray } = await params;
   const id = idArray[0];
+  const currentSlug = idArray[1];
 
   const data = await getCachedScrapData(idArray);
-  const scrapData = data?.scrap || null;
-  const firstComment = data?.firstComment || null;
-  const comments = data?.comments || [];
+  
+  if (!data) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-grow flex items-center justify-center p-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">スレッドが見つかりませんでした</h1>
+            <Link href="/" className="text-blue-600 hover:underline">トップページに戻る</Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const { scrap: scrapData, firstComment, comments } = data;
+  const expectedSlug = generateSlug(scrapData.title);
+
+  // Canonical redirect: If the URL doesn't have the correct slug, redirect (3xx)
+  // This consolidates all versions of the URL into one for Google.
+  if (currentSlug !== expectedSlug) {
+    redirect(`/scraps/${id}/${expectedSlug}`);
+  }
 
   const host = await getServerBaseUrl();
   

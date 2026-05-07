@@ -95,14 +95,31 @@ export const viewport: Viewport = {
   themeColor: '#3b82f6',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const host = await getServerBaseUrl();
+  
+  const orgJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    'name': 'じょはり',
+    'url': host,
+    'logo': `${host}/icon.svg`,
+    'sameAs': [
+      'https://x.com/johari_cloud'
+    ]
+  };
+
   return (
     <html lang="ja" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <FirebaseProvider>
           {children}
           <Toaster position="top-center" richColors />

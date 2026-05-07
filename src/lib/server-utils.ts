@@ -4,6 +4,13 @@ import { headers } from 'next/headers';
  * Returns the base URL of the application on the server side.
  */
 export async function getServerBaseUrl() {
+  // Priority 1: Environment variable (Explicitly set by user/developer)
+  // This is the most reliable for SEO as it's stable.
+  const envBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_URL;
+  if (envBaseUrl && envBaseUrl.includes('johari.cloud')) {
+    return envBaseUrl.startsWith('http') ? envBaseUrl : `https://${envBaseUrl}`;
+  }
+
   let host: string | null = null;
   let protocol = 'https';
 
@@ -12,26 +19,20 @@ export async function getServerBaseUrl() {
     host = headersList.get('host');
     protocol = headersList.get('x-forwarded-proto') || 'https';
   } catch (e) {
-    // headers() might throw during build or static generation in some Next.js versions
+    // headers() might throw during build or static generation
     console.warn('Failed to get headers in getServerBaseUrl:', e);
   }
   
+  // Priority 2: Use detected host if available
   if (host) {
     return `${protocol}://${host}`;
   }
   
-  // Vercel specific env var
+  // Priority 3: Vercel specific env var
   if (process.env.NEXT_PUBLIC_VERCEL_URL) {
     return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
   }
   
-  // Fallbacks
-  const fallback = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_URL || 'https://johari.cloud';
-  
-  // Ensure protocol
-  if (fallback && !fallback.startsWith('http')) {
-    return `https://${fallback}`;
-  }
-
-  return fallback;
+  // Fallback
+  return envBaseUrl ? (envBaseUrl.startsWith('http') ? envBaseUrl : `https://${envBaseUrl}`) : 'https://johari.cloud';
 }
