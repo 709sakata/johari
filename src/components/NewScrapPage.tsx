@@ -10,7 +10,7 @@ import { DIVERSE_EMOJIS } from '../constants/emojis';
 
 interface NewScrapPageProps {
   onClose: () => void;
-  onSuccess: (scrapId: string) => void;
+  onSuccess: (scrapId: string, title: string) => void;
   initialTitle?: string;
 }
 
@@ -75,7 +75,7 @@ export function NewScrapPage({ onClose, onSuccess, initialTitle = '' }: NewScrap
       setTagsInput('');
       logActivity(ActivityType.ACTION, undefined, 'create_scrap', { title: title.trim(), scrapId: docRef.id, tags });
       toast.success('スレッドを作成しました');
-      onSuccess(docRef.id);
+      onSuccess(docRef.id, title.trim());
     } catch (error) {
       toast.error('スレッドの作成に失敗しました');
       handleFirestoreError(error, OperationType.CREATE, path);

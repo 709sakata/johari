@@ -6,6 +6,8 @@ import { NewScrapPage } from '../../components/NewScrapPage';
 import { Header } from '../../components/Header';
 import { Footer } from '../../components/Footer';
 
+import { generateSlug } from '@/lib/utils';
+
 function NewScrapContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -15,7 +17,10 @@ function NewScrapContent() {
     <NewScrapPage
       initialTitle={initialTitle}
       onClose={() => router.back()}
-      onSuccess={(id) => router.push(`/scraps/${id}`)}
+      onSuccess={(id, title) => {
+        const slug = title ? generateSlug(title) : '';
+        router.push(`/scraps/${id}${slug ? `/${slug}` : ''}`);
+      }}
     />
   );
 }
